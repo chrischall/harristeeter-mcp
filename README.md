@@ -22,6 +22,16 @@ extension (the fetchproxy bridge), reusing your session. There are no credential
 If a second browser also runs ContextMint Bridge, stderr will show a fresh pair code on every
 call even though the call succeeds. Don't approve those; that's the other browser being refused.
 
+## Without the browser: Kroger's official API (optional)
+
+Product search, prices and store lookup can run without the bridge through Kroger's official
+API. Register an app at [developer.kroger.com](https://developer.kroger.com) and set
+`KROGER_API_CLIENT_ID` and `KROGER_API_CLIENT_SECRET`. `ht_search_products`, `ht_get_products` and
+`ht_find_stores` then call `api.kroger.com` directly, pricing against `HARRISTEETER_LOCATION_ID`
+(use `ht_find_stores` to look it up) or the store chosen in your browser. Everything else (cart,
+checkout, coupons, lists, Order Ahead, pharmacy) still needs the bridge: Kroger's API sign-in
+doesn't accept Harris Teeter accounts, so it can't act on your account.
+
 ## Install
 
 ```json
@@ -84,6 +94,8 @@ mean faking those signals, so the final click stays with you. See [docs/HT-API.m
 | Variable | Default | |
 |---|---|---|
 | `HARRISTEETER_WS_PORT` | `37149` | fetchproxy concentrator port, shared by the whole fleet. Change only if you know why. |
+| `KROGER_API_CLIENT_ID` / `KROGER_API_CLIENT_SECRET` | unset | Optional Kroger developer app: search and prices without the browser |
+| `HARRISTEETER_LOCATION_ID` | your browser's store | 8-digit store id for bridge-free search |
 | `HARRISTEETER_DEBUG` | unset | `1` for verbose bridge logging to stderr |
 | `MCP_USER_TZ` | `America/New_York` | IANA zone sent with pickup-time requests |
 | `MCP_CONFIRM_MODE` | `ask-user` | `ask-user` (the model must get your OK in chat before using a token), `auto`, or `refuse` |

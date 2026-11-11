@@ -11,6 +11,7 @@
 import { runMcp, readPortEnv } from '@chrischall/mcp-utils';
 import { VERSION } from './version.js';
 import { HtClient } from './client.js';
+import { KrogerApi } from './api/kroger.js';
 import { FetchproxyTransport, DEFAULT_PORT } from './transport-fetchproxy.js';
 import { registerProductTools } from './tools/products.js';
 import { registerCartTools } from './tools/cart.js';
@@ -26,6 +27,8 @@ import { registerHealthcheckTools } from './tools/healthcheck.js';
 const port = readPortEnv('HARRISTEETER_WS_PORT', DEFAULT_PORT);
 const transport = new FetchproxyTransport({ port, version: VERSION });
 const client = new HtClient({ transport });
+// Optional bridge-free product search (KROGER_API_CLIENT_ID / _SECRET).
+const kroger = new KrogerApi();
 await client.start();
 
 await runMcp({
@@ -33,7 +36,7 @@ await runMcp({
   version: VERSION,
   deps: client,
   tools: [
-    (server) => registerProductTools(server, client),
+    (server) => registerProductTools(server, client, kroger),
     (server) => registerCartTools(server, client),
     (server) => registerCheckoutTools(server, client),
     (server) => registerOrderTools(server, client),

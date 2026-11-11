@@ -93,6 +93,7 @@ function registerAll(server: McpServer, client: HtClient) {
 const EXPECTED_INTENTS: Record<string, string> = {
   ht_search_products: 'lookup',
   ht_get_products: 'lookup',
+  ht_find_stores: 'lookup',
   ht_get_cart: 'lookup',
   ht_add_to_cart: 'change',
   ht_update_cart_item: 'change',

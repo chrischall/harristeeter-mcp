@@ -34,7 +34,10 @@
       "env": {
         "HARRISTEETER_WS_PORT": "${user_config.harristeeter_ws_port}",
         "HARRISTEETER_DEBUG": "${user_config.harristeeter_debug}",
-        "MCP_USER_TZ": "${user_config.mcp_user_tz}"
+        "MCP_USER_TZ": "${user_config.mcp_user_tz}",
+        "KROGER_API_CLIENT_ID": "${user_config.kroger_api_client_id}",
+        "KROGER_API_CLIENT_SECRET": "${user_config.kroger_api_client_secret}",
+        "HARRISTEETER_LOCATION_ID": "${user_config.harristeeter_location_id}"
       }
     }
   },
@@ -184,6 +187,10 @@
       "description": "Remove items from a shopping list"
     },
     {
+      "name": "ht_find_stores",
+      "description": "Find Harris Teeter stores near a ZIP (needs Kroger API credentials)"
+    },
+    {
       "name": "ht_healthcheck",
       "description": "Check the fetchproxy browser-bridge connection"
     }
@@ -205,6 +212,25 @@
       "type": "string",
       "title": "Time zone",
       "description": "IANA time zone sent with pickup-time requests (default America/New_York).",
+      "required": false
+    },
+    "kroger_api_client_id": {
+      "type": "string",
+      "title": "Kroger API client id (optional)",
+      "description": "From an app at developer.kroger.com. With the secret, product search and prices work without the browser.",
+      "required": false
+    },
+    "kroger_api_client_secret": {
+      "type": "string",
+      "title": "Kroger API client secret (optional)",
+      "description": "The app secret from developer.kroger.com.",
+      "required": false,
+      "sensitive": true
+    },
+    "harristeeter_location_id": {
+      "type": "string",
+      "title": "Store location id (optional)",
+      "description": "8-digit Harris Teeter store id the bridge-free search prices against (find with ht_find_stores). Default: the store chosen in your browser.",
       "required": false
     }
   },
