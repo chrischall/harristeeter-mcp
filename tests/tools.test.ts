@@ -124,11 +124,12 @@ const EXPECTED_INTENTS: Record<string, string> = {
   ht_oa_place_order: 'send',
   ht_rx_session: 'lookup',
   ht_rx_list_prescriptions: 'lookup',
+  ht_rx_request_refill: 'send',
 };
 // Tools that reach another person or cannot be undone from this tool set.
-const DESTRUCTIVE = new Set(['ht_delete_shopping_list', 'ht_oa_place_order']);
-const GATED = new Set(['ht_start_checkout', 'ht_delete_shopping_list', 'ht_oa_place_order']);
-const WRITES = new Set(['ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout', 'ht_clip_coupon', 'ht_unclip_coupon', 'ht_create_shopping_list', 'ht_rename_shopping_list', 'ht_delete_shopping_list', 'ht_oa_place_order']);
+const DESTRUCTIVE = new Set(['ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
+const GATED = new Set(['ht_start_checkout', 'ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
+const WRITES = new Set(['ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout', 'ht_clip_coupon', 'ht_unclip_coupon', 'ht_create_shopping_list', 'ht_rename_shopping_list', 'ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
 
 describe('served tool list', () => {
   it('every tool is hinted, annotated and in manifest.json', async () => {
@@ -167,7 +168,7 @@ describe('served tool list', () => {
     for (const t of manifest.tools) expect(t.description.trim(), t.name).not.toBe('');
   });
 
-  it('exactly the checkout, list delete and Order Ahead tools are confirmation-gated', async () => {
+  it('exactly the checkout, list delete, Order Ahead and refill tools are confirmation-gated', async () => {
     const { client } = fakeSite();
     const h = await createTestHarness((s) => registerAll(s, client));
     const { tools } = await h.client.listTools();

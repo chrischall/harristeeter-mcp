@@ -215,3 +215,69 @@ describe('pharmacy', () => {
     for (const leaked of ['1900-01-01', '1 Test St', 'TESTPLAN']) expect(text).not.toContain(leaked);
   });
 });
+
+describe('prescription refill', () => {
+  it('formats the pickup time in the pharmacy zone, across DST', async () => {
+    const { pharmacyPickupTime } = await import('../src/tools/pharmacy.js');
+    expect(pharmacyPickupTime('2030-01-15', '3:30 PM', 'America/New_York')).toBe('2030-01-15T15:30:00-05:00');
+    expect(pharmacyPickupTime('2030-07-15', '9:05 AM', 'America/New_York')).toBe('2030-07-15T09:05:00-04:00');
+    expect(pharmacyPickupTime('2030-07-15', '12:00 PM', 'America/New_York')).toBe('2030-07-15T12:00:00-04:00');
+    expect(pharmacyPickupTime('2030-07-15', '12:30 AM', 'America/New_York')).toBe('2030-07-15T00:30:00-04:00');
+  });
+
+  function rxSite(rx: Record<string, unknown>) {
+    return makeClient((init, { path }) => {
+      if (path === '/rx-security/session') return { active: true, sessionStatus: 'AUTHORIZED' };
+      if (path === '/rx/api/patient-profiles/') return [{ patientNumber: 'P1' }];
+      if (path === '/rx/api/prescription/patient/prescriptions') return { items: [rx] };
+      if (path === '/rx/api/banner/profile') return { userId: 'U1', loyaltyCardNumber: 'L1' };
+      if (init.method === 'POST' && path === '/rx/api/orders-stage') return { orderId: 'O1' };
+      throw new Error(`unscripted ${init.method} ${path}`);
+    });
+  }
+  const REFILLABLE = {
+    rxNumber: '555',
+    rxRecordNumber: '9',
+    drugName: 'TESTDRUG',
+    primaryStatus: 'Refillable',
+    refillable: true,
+    patientPayAmount: 5,
+    facilityId: 'F1',
+    facility: { vanityName: 'Test Pharmacy', timezoneId: 'America/New_York' },
+  };
+
+  it('previews without sending, then stages a pay-at-pharmacy order with no payment data', async () => {
+    const { client, calls } = rxSite(REFILLABLE);
+    const h = await createTestHarness((s) => registerPharmacyTools(s, client));
+    const args = { rxNumber: '555', pickupDate: '2030-01-15', pickupTime: '3:30 PM' };
+    const preview = JSON.stringify(await h.callTool('ht_rx_request_refill', args)).replace(/\\"/g, '"');
+    expect(calls.some((c) => c.path === '/rx/api/orders-stage')).toBe(false);
+    const token = /"confirmToken"\s*:\s*"([^"]+)"/.exec(preview)![1];
+    await h.callTool('ht_rx_request_refill', { ...args, confirmToken: token });
+    await h.close();
+    const post = calls.find((c) => c.path === '/rx/api/orders-stage')!;
+    const body = JSON.parse(post.body!);
+    expect(body).toEqual({
+      userId: 'U1',
+      pickupTime: '2030-01-15T15:30:00-05:00',
+      orderType: 'RETAIL',
+      facilityId: 'F1',
+      rxRecords: [{ rxNumber: '555', rxRecordNumber: '9', patientNumber: 'P1' }],
+      paymentType: 'POINT_OF_SALE',
+      loyaltyNumber: 'L1',
+      orderRevenue: 5,
+      componentName: 'checkout step 4',
+    });
+    expect(body).not.toHaveProperty('paymentDetails');
+  });
+
+  it('refuses a prescription that is not refillable, before any write', async () => {
+    const { client, calls } = rxSite({ ...REFILLABLE, refillable: false, primaryStatus: 'Too Soon to Refill' });
+    const h = await createTestHarness((s) => registerPharmacyTools(s, client));
+    const res = await h.callTool('ht_rx_request_refill', { rxNumber: '555', pickupDate: '2030-01-15', pickupTime: '3:30 PM' });
+    await h.close();
+    expect(res.isError).toBe(true);
+    expect(JSON.stringify(res)).toContain('Too Soon to Refill');
+    expect(calls.some((c) => c.path === '/rx/api/orders-stage')).toBe(false);
+  });
+});

@@ -172,6 +172,10 @@
       "description": "List prescriptions: status, refills remaining, due dates, price"
     },
     {
+      "name": "ht_rx_request_refill",
+      "description": "Request a prescription refill, paid at the pharmacy (confirmation-gated)"
+    },
+    {
       "name": "ht_healthcheck",
       "description": "Check the fetchproxy browser-bridge connection"
     }

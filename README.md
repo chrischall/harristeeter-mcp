@@ -58,6 +58,7 @@ call even though the call succeeds. Don't approve those; that's the other browse
 | `ht_oa_list_departments` / `ht_oa_list_menu` / `ht_oa_get_item` / `ht_oa_list_pickup_times` | Order Ahead menus and pickup times |
 | `ht_oa_place_order` | **Confirmation-gated.** Place an Order Ahead order, paid at pickup. Not yet verified against a live order. |
 | `ht_rx_session` / `ht_rx_list_prescriptions` | Pharmacy: session status, prescriptions, refills remaining, due dates |
+| `ht_rx_request_refill` | **Confirmation-gated.** Request a refill, paid at the pharmacy. Not yet verified against a live refill. |
 | `ht_healthcheck` | Bridge status |
 
 Cart tools change only your cart and can be undone, so they run without confirmation.

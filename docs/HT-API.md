@@ -148,10 +148,13 @@ every pharmacy tool checks it first and asks the user to re-verify when it lapse
 - `GET /rx/api/prescription/patient/prescriptions?patientNumber&includePaymentCards=false&deliveryEligibility=true`
   → `items[{rxNumber, drugName, primaryStatus, secondaryStatus, refillable, refillsRemainingCount, refillDueDate, lastRefillDate, promiseDateTime, patientPayAmount, prescriber, facility{vanityName, pharmacyHours}}]` — live.
   The compact view drops addresses, birth date, insurance and card fields.
-- Refill (not built): add to `/rx/api/cart`, then `POST /rx/api/orders-stage`
-  `{userId, pickupTime, orderType:"RETAIL", facilityId, rxRecords:[{rxNumber, rxRecordNumber, patientNumber}], paymentType:"POINT_OF_SALE", loyaltyNumber, orderRevenue}`.
+- `GET /rx/api/banner/profile` → `{userId (96 chars), loyaltyCardNumber, …}` — live
+- Refill: `POST /rx/api/orders-stage`
+  `{userId, pickupTime:"<YYYY-MM-DDTHH:mm:ss±hh:mm in the pharmacy's zone>", orderType:"RETAIL", facilityId, rxRecords:[{rxNumber, rxRecordNumber, patientNumber}], paymentType:"POINT_OF_SALE", loyaltyNumber, orderRevenue, componentName:"checkout step 4"}`
+  (RxCheckoutPage's RETAIL branch). **Code only** — `ht_rx_request_refill` is gated and says so.
+  The site also keeps an rx cart (`/rx/api/cart`); whether staging requires it is unverified.
   Pay-at-pharmacy needs no payment data; "pay now" (`PAYSYS`) goes through the
-  wallet and its fraud signals and stays out of scope. `userId`'s source is unconfirmed.
+  wallet and its fraud signals and stays out of scope.
 
 ## Bridge gotcha: pharmacy tabs swallow POSTs
 

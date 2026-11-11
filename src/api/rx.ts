@@ -69,3 +69,37 @@ export async function prescriptions(client: HtClient, patientNumber: string): Pr
   })) as { items?: Rec[] };
   return j?.items ?? [];
 }
+
+/** The pharmacy customer record: carries the userId and loyalty number a refill order needs. */
+export async function rxProfile(client: HtClient): Promise<Rec> {
+  await requireRxSession(client);
+  return ((await rxGet(client, '/rx/api/banner/profile')) as Rec) ?? {};
+}
+
+export interface RefillOrder {
+  userId: string;
+  pickupTime: string;
+  orderType: 'RETAIL';
+  facilityId: string;
+  rxRecords: { rxNumber: string; rxRecordNumber: string; patientNumber: string }[];
+  paymentType: 'POINT_OF_SALE';
+  loyaltyNumber?: string;
+  orderRevenue?: number;
+  componentName: string;
+}
+
+/**
+ * Stage a pay-at-pharmacy refill (RxCheckoutPage's RETAIL branch, from the
+ * site's code — not yet verified against a live refill). "Pay now" goes
+ * through the wallet and its fraud signals, so it is deliberately not offered.
+ */
+export async function stageRefill(client: HtClient, order: RefillOrder): Promise<unknown> {
+  await requireRxSession(client);
+  const r = await client.raw('POST', '/rx/api/orders-stage', { body: order });
+  if (r.status === 401 || r.status === 403) throw new RxSessionError(`HTTP ${r.status}`);
+  if (r.status >= 400 || r.json === undefined) {
+    const msg = (r.json as Rec | undefined)?.message ?? r.text.slice(0, 160);
+    throw new McpToolError(`Pharmacy refused the refill (${r.status}): ${String(msg)}`, { status: r.status, kind: 'http' });
+  }
+  return r.json;
+}
