@@ -150,4 +150,22 @@ describe('store tools (B) and per-call store (C)', () => {
     expect(out.browser.pickupStore.locationId).toBe('09700000');
     expect(out.search).toMatchObject({ locationId: '09700002', source: 'saved' });
   });
+
+  it('ht_get_store keeps the 0.2.0 top-level pickupStore / activeModality fields (follow-up #11)', async () => {
+    const { api } = fakeKroger();
+    const { client } = makeClient(() => PREFS);
+    const h = await createTestHarness((s) => registerProductTools(s, client, api));
+    const out = parseToolResult<{ pickupStore: { locationId: string }; activeModality: string }>(await h.callTool('ht_get_store', {}));
+    await h.close();
+    expect(out.pickupStore).toMatchObject({ locationId: '09700000', name: 'Test Store' });
+    expect(out.activeModality).toBe('PICKUP');
+  });
+
+  it('ht_get_store still fails, as in 0.2.0, when it can say nothing at all', async () => {
+    const { client } = makeClient(() => ({ status: 401, body: '{}' }));
+    const h = await createTestHarness((s) => registerProductTools(s, client, new KrogerApi({ clientId: '', clientSecret: '' })));
+    const res = await h.callTool('ht_get_store', {});
+    await h.close();
+    expect(res.isError).toBe(true);
+  });
 });

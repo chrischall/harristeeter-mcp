@@ -169,12 +169,14 @@ export function registerProductTools(server: McpServer, client: HtClient, kroger
     },
     async () => {
       const f = readStoreFile();
-      let browser: unknown = null;
+      let browser: { pickupStore: unknown; activeModality: unknown } | null = null;
       let browserError: string | undefined;
       try {
         const prefs = await client.preferences();
         browser = { pickupStore: prefs.pickup ?? null, activeModality: prefs.activeModality ?? null };
       } catch (err) {
+        // As in 0.2.0, fail when the bridge was the only thing to report.
+        if (!kroger.configured) throw err;
         browserError = (err as Error).message;
       }
       let search: unknown = null;
@@ -186,6 +188,9 @@ export function registerProductTools(server: McpServer, client: HtClient, kroger
         }
       }
       return minifiedResult({
+        // 0.2.0's top-level fields, kept so existing callers keep working.
+        pickupStore: browser?.pickupStore ?? null,
+        activeModality: browser?.activeModality ?? null,
         browser,
         ...(browserError ? { browserError } : {}),
         search: kroger.configured ? search : 'bridge (Kroger API not configured)',
