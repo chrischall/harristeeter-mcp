@@ -38,6 +38,37 @@ call() {
   cat "$out"
 }
 
+# A call outside /atlas/v1 (Order Ahead /fresh/api, pharmacy /rx). $1 method, $2 path, $3 body file, rest: -H args.
+site() {
+  local method="$1" p="$2" body="${3:-}"; shift 3 || shift $#
+  local out="$TMP/site.json" rc=0
+  if [ -n "$body" ]; then
+    fpx request "https://www.harristeeter.com$p" -p "$PROFILE" -X "$method" -H 'content-type: application/json' "$@" -d "@$body" >"$out" || rc=$?
+  else
+    fpx request "https://www.harristeeter.com$p" -p "$PROFILE" -X "$method" "$@" >"$out" || rc=$?
+  fi
+  [ "$rc" -eq 0 ] || return "$rc"
+  if head -c 1 "$out" | grep -q '<'; then
+    die "got a web page instead of data — for pharmacy commands sign in again at https://www.harristeeter.com/rx/dashboard (one-time code)"
+  fi
+  cat "$out"
+}
+
+# Order Ahead headers: division code + store number from the pickup location.
+fresh_hdr() {
+  local f="$CACHE_DIR/fresh.json"
+  if [ -z "$(find "$f" -mmin -60 2>/dev/null)" ]; then
+    site GET "/fresh/api/v1/locationId/$(loc)" "" -H 'X-Kroger-Tenant: kroger' | jq '.Data | {DivisionCode, StoreNumber}' >"$f"
+  fi
+  cat "$f"
+}
+
+# Pharmacy commands need the step-up pharmacy session (about an hour).
+rx_check() {
+  site GET /rx-security/session "" | jq -e '.active == true and .sessionStatus == "AUTHORIZED"' >/dev/null \
+    || die "pharmacy session not active — sign in at https://www.harristeeter.com/rx/dashboard (one-time code); it lasts about an hour"
+}
+
 # Store context. x-laf-object = JSON of preferences.lafObject; cached 10 min.
 prefs() {
   mkdir -p "$CACHE_DIR"
@@ -104,7 +135,20 @@ ht set <upc> <qty> [...]       set absolute quantities (0 removes)
 ht remove <upc>...             remove lines
 ht timeslots                   pickup windows for the current cart
 ht checkout                    current checkout draft(s)
-ht orders [days]               purchase history (default 90 days)
+ht orders [days]               purchase history (default 90 days), with receiptKey
+ht receipt <receiptKey>        one purchase in full
+ht upcoming                    orders placed but not yet picked up
+ht coupons [unclipped|clipped|all] [search]   e-VIC digital coupons
+ht clip <couponId> | ht unclip <couponId>     load / remove a coupon (reversible)
+ht specials                    your My Specials
+ht weeklyad <dept 1-18> [text] weekly ad for one department
+ht points                      fuel points
+ht recipes <query>             recipe search;  ht recipe <id>  ingredients + steps
+ht lists                       shopping lists;  ht list <listId>  one list
+ht oa-departments              Order Ahead departments
+ht oa-menu <departmentId>      Order Ahead menu
+ht oa-times <YYYY-MM-DD> <departmentId>   Order Ahead pickup times
+ht rx                          prescriptions (needs the pharmacy sign-in)
 USAGE
   exit 1
 }
@@ -142,9 +186,65 @@ case "$cmd" in
       total: .summary.cost.total, fees: .summary.cost.feeTotal, tax: .summary.cost.taxTotal,
       url: "https://www.harristeeter.com/checkout?nc=true&orderId=\(.id)"}]' ;;
   orders)
-    days="${1:-90}"; end="$(date +%Y-%m-%d)"
+    days="${1:-90}"; [ "$((10#$days))" -gt 730 ] && { echo "ht: history reaches back at most 730 days; using 730" >&2; days=730; }
+    end="$(date +%Y-%m-%d)"
     start="$(date -v-"${days}"d +%Y-%m-%d 2>/dev/null || date -d "-${days} days" +%Y-%m-%d)"
     call GET "/post-order/v1/purchase-history-search?pageNo=1&pageSize=20&startDate=$start&endDate=$end" laf \
-      | jq '[.data.postOrderSearch.data[]? | {date: .createdDateTime.value, purchaseType, status, total, items: (.lineItems | length)}]' ;;
+      | jq '[.data.postOrderSearch.data[]? | {date: .createdDateTime.value, purchaseType, status, total, receiptKey, items: (.lineItems | length)}]' ;;
+  receipt)
+    [ -n "${1:-}" ] || usage
+    IFS='~' read -r d s dt t x <<<"$1"
+    if [ -n "${x:-}" ]; then k="${dt}_${d}_${s}_${t}_${x}"; else k="$1"; fi
+    jq -n --arg k "$k" '[$k]' >"$TMP/rk.json"
+    fpx request "$API/purchase-history/v2/details" -p "$PROFILE" -X POST -H 'content-type: application/json' -H 'x-kroger-channel: WEB' -H 'x-isreceipt: true' -H "x-laf-object: $(laf)" -d "@$TMP/rk.json" \
+      | jq '.data.purchaseHistoryDetails[0] | {date: .receiptCreateDateTime.value, purchaseType, store: .storeInfo.vanityName, totals: .costSummary,
+          items: [.items[]? | {upc: .purchasedData.upc, description: .purchasedData.displayInfo.description, quantity: .purchasedData.quantityInfo.received, paid: .purchasedData.pricingInfo.totalPricePaid}]}' ;;
+  upcoming)
+    fpx request "$API/post-order/v1/pending-order-summaries" -p "$PROFILE" -H 'x-kroger-channel: WEB' -H 'x-application-name: WEB' -H "x-laf-object: $(laf)" | jq '.data.pendingOrderSummaries.data' ;;
+  coupons)
+    st="${1:-unclipped}"; case "$st" in clipped) f='filter.status=active' ;; all) f='filter.status=unclipped&filter.status=active' ;; *) f='filter.status=unclipped' ;; esac
+    q=""; [ -n "${2:-}" ] && q="&filter.searchString=$(jq -rn --arg q "$2" '$q|@uri')"
+    call GET "/savings-coupons/v2/coupons?$f&page.size=50&page.offset=0$q" laf \
+      | jq '{counts: .meta.coupons.userSavingsInfoByType.standard, coupons: [.data.coupons[] | {id: (.id|tostring), brand, description: .shortDescription, value, expires: .displayEndDate}]}' ;;
+  clip|unclip)
+    [ -n "${1:-}" ] || usage
+    jq -n --arg a "$(printf '%s' "$cmd" | tr a-z A-Z)" --arg id "$1" '{action: $a, couponId: $id}' >"$TMP/c.json"
+    call POST /savings-coupons/v1/clip-unclip laf "$TMP/c.json" >/dev/null && echo "{\"couponId\":\"$1\",\"done\":\"$cmd\"}" ;;
+  specials) call GET /savings-coupons/v1/ht-specials laf | jq '[.data.htSpecials[] | {title, size, price: (if (.specialPrice // "") != "" then .specialPrice else .price end), savings, department: .departmentName, ends: .endDate}]' ;;
+  weeklyad)
+    [ -n "${1:-}" ] || usage
+    call GET "/savings-coupons/v1/ht-weekly-ads?filter.departmentNumber=$1" laf \
+      | jq --arg t "${2:-}" '[.data.htWeeklyAds[] | select($t == "" or ((.title + " " + (.subtitle // "")) | ascii_downcase | contains($t | ascii_downcase))) | {title, subtitle, size, price: (if (.specialPrice // "") != "" then .specialPrice else .price end), savings, ends: .endDate}]' ;;
+  points) call GET /points/v1/program-summaries | jq '[.data.pointsProgramSummaries.programSummaries[] | {program: .name, current: .values.current, unit: .uom, expiringNext: .expiring.next[0]}]' ;;
+  recipes)
+    [ -n "${1:-}" ] || usage
+    call GET "/recipe/recipes?filter.query=$(jq -rn --arg q "$1" '$q|@uri')&page.offset=0&page.size=10" | jq '[.data.recipes.data.recipes[] | {id, title, minutes: .totalTimeInMinutes, servings}]' ;;
+  recipe)
+    [ -n "${1:-}" ] || usage
+    call GET "/recipe/recipes/$1?projections=recipes.full&filter.division=$(loc | cut -c1-3)" \
+      | jq '.data.recipes.data.recipes | {title, servings, ingredients: [.ingredients[].summary], steps: [.instructions[].task], products: [.ingredientProducts.ingredients[]? | {ingredient: .summary, upcs: [.products[:3][].upc]}]}' ;;
+  lists) call GET /shopping-list/v1/shopping-lists laf | jq '[.data.shoppingLists[] | {listId, name, itemCount}]' ;;
+  list) [ -n "${1:-}" ] || usage; call GET "/shopping-list/v1/shopping-lists/$1?projections=shoppingLists.full" laf | jq '.data.shoppingLists' ;;
+  oa-departments)
+    h="$(fresh_hdr)"; div="$(jq -r .DivisionCode <<<"$h")"; st="$(jq -r .StoreNumber <<<"$h")"
+    site GET "/fresh/api/v2/ffo/stores/$st/sections/Fresh/departmentGroups" "" -H 'X-Kroger-Tenant: kroger' -H "division: $div" \
+      | jq '[.Data[] | {group: .DepartmentGroupName, departments: [.Departments[] | {departmentId: ._id, name: .DepartmentName}]}]' ;;
+  oa-menu)
+    [ -n "${1:-}" ] || usage
+    h="$(fresh_hdr)"; div="$(jq -r .DivisionCode <<<"$h")"; st="$(jq -r .StoreNumber <<<"$h")"
+    site GET "/fresh/api/v1/ffo/stores/$st/departments/$1/products" "" -H 'X-Kroger-Tenant: kroger' -H "division: $div" \
+      | jq '[.Data[] | {category: .CategoryName, items: [.products[] | {productId: .ProductId, name: .ProductName, price: (.SpecialPrice // .Price), unit: .PriceUnit}]}]' ;;
+  oa-times)
+    [ -n "${2:-}" ] || usage
+    h="$(fresh_hdr)"; div="$(jq -r .DivisionCode <<<"$h")"; st="$(jq -r .StoreNumber <<<"$h")"
+    jq -n --arg d "$1" --arg id "$2" '{OrderDate: $d, Items: [{DepartmentId: $id}]}' >"$TMP/ot.json"
+    site POST "/fresh/api/v2/ffo/stores/$st/departments/timeslots" "$TMP/ot.json" -H 'X-Kroger-Tenant: kroger' -H "division: $div" | jq '.Data' ;;
+  rx)
+    rx_check
+    site GET /rx/api/patient-profiles/ "" | jq -r '.[].patientNumber' >"$TMP/pts.txt"
+    while IFS= read -r pn; do
+      site GET "/rx/api/prescription/patient/prescriptions?patientNumber=$pn&includePaymentCards=false&deliveryEligibility=true" "" \
+        | jq '[.items[] | {rxNumber, drug: .drugName, status: .primaryStatus, detail: .secondaryStatus, refillsRemaining: .refillsRemainingCount, refillDue: .refillDueDate, lastFilled: .lastRefillDate, price: .patientPayAmount, pharmacy: .facility.vanityName}]'
+    done <"$TMP/pts.txt" ;;
   *) usage ;;
 esac

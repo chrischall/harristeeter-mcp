@@ -1,8 +1,10 @@
 # harristeeter-mcp
 
-Harris Teeter grocery pickup for Claude: search products with prices at your store, build the
-cart, see open pickup windows, and start checkout. **You place the order yourself** on
-harristeeter.com. The MCP stops at a draft checkout with the real totals and hands you the link.
+Harris Teeter for Claude: search groceries with prices at your store, build the cart, pick a
+pickup window and start checkout, clip digital coupons, read the weekly ad and your specials,
+check fuel points and past receipts, find recipes, manage shopping lists, browse and order from
+Order Ahead (deli, subs, pizza, platters), and check your prescriptions. **You place grocery orders
+yourself** on harristeeter.com. The MCP stops at a draft checkout with the real totals and hands you the link.
 
 > This project was developed and is maintained by AI (Claude Code). Use at your own discretion.
 
@@ -44,12 +46,30 @@ call even though the call succeeds. Don't approve those; that's the other browse
 | `ht_list_timeslots` | Open pickup windows and fees for the cart |
 | `ht_start_checkout` | **Confirmation-gated.** Reserve a window and create the checkout, returning totals and the place-order link |
 | `ht_get_checkout` | The current checkout draft |
-| `ht_list_orders` | Past purchases and receipts |
+| `ht_list_orders` | Past purchases and receipts (each with a `receiptKey`) |
+| `ht_get_receipt` | One purchase in full: items, price paid, savings, totals |
+| `ht_list_upcoming_orders` | Orders placed but not yet picked up |
+| `ht_list_coupons` / `ht_clip_coupon` / `ht_unclip_coupon` | e-VIC digital coupons |
+| `ht_list_specials` | Your personalised My Specials |
+| `ht_get_weekly_ad` | This week's ad, by department or text |
+| `ht_get_fuel_points` | Fuel points balance and expiry |
+| `ht_search_recipes` / `ht_get_recipe` | Recipes, with store products matched to ingredients |
+| `ht_list_shopping_lists` / `ht_get_shopping_list` / `ht_create_shopping_list` / `ht_rename_shopping_list` / `ht_delete_shopping_list` | Shopping lists (delete is confirmation-gated). Adding items isn't built yet. |
+| `ht_oa_list_departments` / `ht_oa_list_menu` / `ht_oa_get_item` / `ht_oa_list_pickup_times` | Order Ahead menus and pickup times |
+| `ht_oa_place_order` | **Confirmation-gated.** Place an Order Ahead order, paid at pickup. Not yet verified against a live order. |
+| `ht_rx_session` / `ht_rx_list_prescriptions` | Pharmacy: session status, prescriptions, refills remaining, due dates |
 | `ht_healthcheck` | Bridge status |
 
 Cart tools change only your cart and can be undone, so they run without confirmation.
 `ht_start_checkout` reserves a pickup window, so it previews first and acts only when called
 again with the returned `confirmToken`.
+
+### Pharmacy needs its own sign-in
+
+Opening harristeeter.com/rx asks you to sign in again with a one-time code, and that pharmacy
+session lasts about an hour. When it lapses the `ht_rx_*` tools say so; sign in again at
+https://www.harristeeter.com/rx/dashboard. Keep a regular harristeeter.com tab open as well, because
+the bridge can't send some requests from a pharmacy page.
 
 ### Why it can't press "Place Order"
 

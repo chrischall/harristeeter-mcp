@@ -6,6 +6,11 @@ import { registerProductTools } from '../src/tools/products.js';
 import { registerCartTools } from '../src/tools/cart.js';
 import { registerCheckoutTools } from '../src/tools/checkout.js';
 import { registerOrderTools } from '../src/tools/orders.js';
+import { registerSavingsTools } from '../src/tools/savings.js';
+import { registerRecipeTools } from '../src/tools/recipes.js';
+import { registerListTools } from '../src/tools/lists.js';
+import { registerOrderAheadTools } from '../src/tools/orderahead.js';
+import { registerPharmacyTools } from '../src/tools/pharmacy.js';
 import type { HtClient } from '../src/client.js';
 import { makeClient, PREFS, CART, TIMESLOTS, SLOT, product } from './helpers/stub.js';
 import type { Route } from './helpers/stub.js';
@@ -78,6 +83,11 @@ function registerAll(server: McpServer, client: HtClient) {
   registerCartTools(server, client);
   registerCheckoutTools(server, client);
   registerOrderTools(server, client);
+  registerSavingsTools(server, client);
+  registerRecipeTools(server, client);
+  registerListTools(server, client);
+  registerOrderAheadTools(server, client);
+  registerPharmacyTools(server, client);
 }
 
 const EXPECTED_INTENTS: Record<string, string> = {
@@ -92,8 +102,33 @@ const EXPECTED_INTENTS: Record<string, string> = {
   ht_get_checkout: 'lookup',
   ht_start_checkout: 'change',
   ht_list_orders: 'lookup',
+  ht_list_upcoming_orders: 'lookup',
+  ht_get_receipt: 'lookup',
+  ht_list_coupons: 'lookup',
+  ht_clip_coupon: 'change',
+  ht_unclip_coupon: 'change',
+  ht_list_specials: 'lookup',
+  ht_get_weekly_ad: 'lookup',
+  ht_get_fuel_points: 'lookup',
+  ht_search_recipes: 'lookup',
+  ht_get_recipe: 'lookup',
+  ht_list_shopping_lists: 'lookup',
+  ht_get_shopping_list: 'lookup',
+  ht_create_shopping_list: 'change',
+  ht_rename_shopping_list: 'change',
+  ht_delete_shopping_list: 'change',
+  ht_oa_list_departments: 'lookup',
+  ht_oa_list_menu: 'lookup',
+  ht_oa_get_item: 'lookup',
+  ht_oa_list_pickup_times: 'lookup',
+  ht_oa_place_order: 'send',
+  ht_rx_session: 'lookup',
+  ht_rx_list_prescriptions: 'lookup',
 };
-const WRITES = new Set(['ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout']);
+// Tools that reach another person or cannot be undone from this tool set.
+const DESTRUCTIVE = new Set(['ht_delete_shopping_list', 'ht_oa_place_order']);
+const GATED = new Set(['ht_start_checkout', 'ht_delete_shopping_list', 'ht_oa_place_order']);
+const WRITES = new Set(['ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout', 'ht_clip_coupon', 'ht_unclip_coupon', 'ht_create_shopping_list', 'ht_rename_shopping_list', 'ht_delete_shopping_list', 'ht_oa_place_order']);
 
 describe('served tool list', () => {
   it('every tool is hinted, annotated and in manifest.json', async () => {
@@ -105,7 +140,7 @@ describe('served tool list', () => {
 
     for (const t of tools) {
       const m = (t._meta as { mint?: Record<string, unknown> })?.mint;
-      expect(m?.domain, t.name).toBe('food');
+      expect(m?.domain, t.name).toBe(t.name.startsWith('ht_rx_') ? 'health' : 'food');
       expect(m?.intent, t.name).toBe(EXPECTED_INTENTS[t.name]);
       expect(m?.canonical, t.name).toBeUndefined();
       for (const a of (m?.aliases as string[] | undefined) ?? []) expect(a, t.name).toBe(a.toLowerCase());
@@ -116,6 +151,7 @@ describe('served tool list', () => {
         expect(ann.readOnlyHint, t.name).toBe(false);
         // Silence would publish as destructive by spec default: every write decides.
         expect(typeof ann.destructiveHint, t.name).toBe('boolean');
+        expect(ann.destructiveHint, t.name).toBe(DESTRUCTIVE.has(t.name));
       } else {
         expect(ann.readOnlyHint, t.name).toBe(true);
         expect(ann.destructiveHint, t.name).not.toBe(true);
@@ -131,13 +167,13 @@ describe('served tool list', () => {
     for (const t of manifest.tools) expect(t.description.trim(), t.name).not.toBe('');
   });
 
-  it('the only tool that creates a checkout is confirmation-gated', async () => {
+  it('exactly the checkout, list delete and Order Ahead tools are confirmation-gated', async () => {
     const { client } = fakeSite();
     const h = await createTestHarness((s) => registerAll(s, client));
     const { tools } = await h.client.listTools();
     await h.close();
-    const start = tools.find((t) => t.name === 'ht_start_checkout')!;
-    expect(start.inputSchema.properties).toHaveProperty('confirmToken');
+    const gated = tools.filter((t) => 'confirmToken' in ((t.inputSchema.properties as object) ?? {})).map((t) => t.name).sort();
+    expect(gated).toEqual([...GATED].sort());
   });
 });
 

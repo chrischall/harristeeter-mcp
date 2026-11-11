@@ -13,7 +13,16 @@ import {
   createFetchproxyTransport,
   type FetchproxyTransport as FetchproxyVerbTransport,
 } from '@chrischall/mcp-utils/fetchproxy';
+import { McpToolError } from '@chrischall/mcp-utils';
 import type { HtTransport, FetchInit, FetchResult } from './transport.js';
+
+/**
+ * Observed live 2026-11-11: when every open harristeeter.com tab is a pharmacy
+ * (/rx/…) page, POSTs relayed through it never answer while GETs do. Say so,
+ * because the bare timeout reads like a dead bridge.
+ */
+export const RX_TAB_HINT =
+  'If the only harristeeter.com tabs open are pharmacy (/rx) pages, open https://www.harristeeter.com/ in another tab — the bridge cannot send these requests from a pharmacy page.';
 
 /**
  * The whole fetchproxy fleet shares this concentrator port — the ContextMint
@@ -34,6 +43,8 @@ export interface FetchproxyTransportOptions {
   server?: string;
   version: string;
   fetchTimeoutMs?: number;
+  /** Test seam: a ready-made verb transport instead of a real bridge. */
+  inner?: FetchproxyVerbTransport;
 }
 
 export class FetchproxyTransport implements HtTransport {
@@ -42,7 +53,7 @@ export class FetchproxyTransport implements HtTransport {
 
   constructor(opts: FetchproxyTransportOptions) {
     this.port = opts.port ?? DEFAULT_PORT;
-    this.inner = createFetchproxyTransport<FetchproxyVerbTransport>({
+    this.inner = opts.inner ?? createFetchproxyTransport<FetchproxyVerbTransport>({
       port: this.port,
       serverName: opts.server ?? 'harristeeter-mcp',
       version: opts.version,
@@ -70,12 +81,20 @@ export class FetchproxyTransport implements HtTransport {
   async fetch(init: FetchInit): Promise<FetchResult> {
     const start = Date.now();
     log('fetch:start', { method: init.method, path: init.path.split('?')[0] });
-    const response = await this.inner.fetch({
-      method: init.method,
-      path: init.path,
-      headers: init.headers,
-      body: init.body,
-    });
+    let response;
+    try {
+      response = await this.inner.fetch({
+        method: init.method,
+        path: init.path,
+        headers: init.headers,
+        body: init.body,
+      });
+    } catch (err) {
+      if (init.method !== 'GET' && (err as Error)?.name === 'FetchproxyTimeoutError') {
+        throw new McpToolError((err as Error).message, { hint: RX_TAB_HINT, kind: 'timeout', cause: err });
+      }
+      throw err;
+    }
     log('fetch:done', { path: init.path.split('?')[0], elapsed: Date.now() - start, status: response.status });
     return { status: response.status, body: response.body, url: response.url };
   }

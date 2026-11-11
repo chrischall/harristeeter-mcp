@@ -4,7 +4,7 @@
   "name": "harristeeter-mcp",
   "display_name": "Harris Teeter",
   "version": "0.0.0",
-  "description": "Harris Teeter grocery pickup for Claude — search products, build the cart, pick a pickup time and start checkout",
+  "description": "Harris Teeter for Claude — groceries, cart, pickup, coupons, weekly ad, recipes, lists, Order Ahead and pharmacy",
   "author": {
     "name": "Chris Chall",
     "email": "chris.c.hall@gmail.com",
@@ -82,6 +82,94 @@
     {
       "name": "ht_list_orders",
       "description": "List past purchases and receipts"
+    },
+    {
+      "name": "ht_list_upcoming_orders",
+      "description": "List orders placed but not yet picked up"
+    },
+    {
+      "name": "ht_get_receipt",
+      "description": "Read one purchase: items, prices paid, savings and totals"
+    },
+    {
+      "name": "ht_list_coupons",
+      "description": "List e-VIC digital coupons, available or clipped"
+    },
+    {
+      "name": "ht_clip_coupon",
+      "description": "Load a digital coupon to your card"
+    },
+    {
+      "name": "ht_unclip_coupon",
+      "description": "Remove a clipped digital coupon from your card"
+    },
+    {
+      "name": "ht_list_specials",
+      "description": "Your personalised My Specials sale items"
+    },
+    {
+      "name": "ht_get_weekly_ad",
+      "description": "This week's weekly ad by department"
+    },
+    {
+      "name": "ht_get_fuel_points",
+      "description": "Fuel points balance, earned, redeemed and expiring"
+    },
+    {
+      "name": "ht_search_recipes",
+      "description": "Search recipes by keyword"
+    },
+    {
+      "name": "ht_get_recipe",
+      "description": "A recipe's ingredients, steps and matching store products"
+    },
+    {
+      "name": "ht_list_shopping_lists",
+      "description": "Your shopping lists"
+    },
+    {
+      "name": "ht_get_shopping_list",
+      "description": "One shopping list with its items"
+    },
+    {
+      "name": "ht_create_shopping_list",
+      "description": "Create a shopping list"
+    },
+    {
+      "name": "ht_rename_shopping_list",
+      "description": "Rename a shopping list"
+    },
+    {
+      "name": "ht_delete_shopping_list",
+      "description": "Delete a shopping list (confirmation-gated)"
+    },
+    {
+      "name": "ht_oa_list_departments",
+      "description": "Order Ahead departments: deli, subs, pizza, platters, bakery, holiday meals"
+    },
+    {
+      "name": "ht_oa_list_menu",
+      "description": "Order Ahead menu for a department"
+    },
+    {
+      "name": "ht_oa_get_item",
+      "description": "One Order Ahead item with options"
+    },
+    {
+      "name": "ht_oa_list_pickup_times",
+      "description": "Order Ahead pickup times for a date"
+    },
+    {
+      "name": "ht_oa_place_order",
+      "description": "Place an Order Ahead order, paid at pickup (confirmation-gated)"
+    },
+    {
+      "name": "ht_rx_session",
+      "description": "Check the pharmacy session (separate sign-in with a one-time code)"
+    },
+    {
+      "name": "ht_rx_list_prescriptions",
+      "description": "List prescriptions: status, refills remaining, due dates, price"
     },
     {
       "name": "ht_healthcheck",

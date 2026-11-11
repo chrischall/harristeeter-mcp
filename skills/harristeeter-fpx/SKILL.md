@@ -35,7 +35,21 @@ scripts/ht timeslots              # pickup windows + fees for the current cart
 scripts/ht checkout               # checkout draft(s): window, total, link
 scripts/ht orders 180             # purchase history, last N days
 scripts/ht store                  # pickup store + store context
+scripts/ht coupons clipped        # e-VIC coupons (unclipped | clipped | all) [search]
+scripts/ht clip <couponId>        # load to card;  scripts/ht unclip <couponId>
+scripts/ht specials               # My Specials;  scripts/ht weeklyad <dept 1-18> [text]
+scripts/ht points                 # fuel points
+scripts/ht receipt <receiptKey>   # one purchase in full (the site sometimes refuses it)
+scripts/ht upcoming               # orders not yet picked up
+scripts/ht recipes chili          # then: scripts/ht recipe <id>
+scripts/ht lists                  # shopping lists;  scripts/ht list <listId>
+scripts/ht oa-departments         # Order Ahead; then oa-menu <departmentId>, oa-times <date> <departmentId>
+scripts/ht rx                     # prescriptions — needs the pharmacy sign-in (below)
 ```
+
+**Pharmacy** commands need a separate sign-in: open https://www.harristeeter.com/rx/dashboard,
+sign in again with the one-time code, and the pharmacy session lasts about an hour. Keep a
+regular harristeeter.com tab open too — the bridge can't send POSTs from a pharmacy page.
 
 Rules:
 - **Resolve before you write.** Get UPCs from `search`; never guess one. UPCs are
@@ -56,7 +70,8 @@ Raw request shapes (headers, bodies, the store-context `x-laf-object`) are in
 
 ## In context groups
 
-harristeeter-mcp is in the **food** group. None of its reads is canonical (no
-what's-new/due/on answer), so "anything due…?" asks do not reach it; ask for
-Harris Teeter by name. As a browser-bridged MCP, the group answers "needs your
+harristeeter-mcp's grocery tools are in the **food** group and its pharmacy tools
+in **health**. None of its reads is canonical yet (upcoming orders and refill status
+have not been seen with real data), so "anything due…?" asks do not reach it; ask
+for Harris Teeter by name. As a browser-bridged MCP, the group answers "needs your
 browser open" when the tab or extension is not available.

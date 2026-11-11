@@ -62,6 +62,8 @@ export interface RequestOptions {
   timeZone?: boolean;
   /** Send a fresh `x-idempotency-key` (the site does on writes). */
   idempotent?: boolean;
+  /** Extra headers some atlas endpoints insist on (verified per endpoint). */
+  headers?: Record<string, string>;
 }
 
 export interface StorePreferences {
@@ -210,6 +212,7 @@ export class HtClient {
     if (opts.laf) headers['x-laf-object'] = (await this.preferences()).laf;
     if (opts.timeZone) headers['user-time-zone'] = this.timeZone;
     if (opts.idempotent) headers['x-idempotency-key'] = randomUUID();
+    Object.assign(headers, opts.headers);
     const full = `/atlas/v1${path}${buildQuery(opts.query)}`;
     const res = await this.transport.fetch({
       method,
@@ -218,6 +221,39 @@ export class HtClient {
       ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
     });
     return parseAtlas<T>(res.status, res.body, full, res.url);
+  }
+
+  /**
+   * A call outside /atlas/v1 — the Order Ahead (`/fresh/api`) and pharmacy
+   * (`/rx/api`, `/rx-security`) apps. They take their own headers and answer
+   * with their own error envelopes, so the caller maps the body.
+   */
+  async raw(
+    method: BridgeMethod,
+    path: string,
+    opts: { query?: RequestOptions['query']; body?: unknown; headers?: Record<string, string> } = {},
+  ): Promise<{ status: number; json: unknown; text: string }> {
+    const headers: Record<string, string> = { accept: 'application/json, text/plain, */*', ...opts.headers };
+    if (opts.body !== undefined) headers['content-type'] = 'application/json';
+    const full = `${path}${buildQuery(opts.query)}`;
+    const res = await this.transport.fetch({
+      method,
+      path: full,
+      headers,
+      ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
+    });
+    if (res.url && /login\.kroger\.com|\/signin/i.test(res.url)) throw new HtSignedOutError('redirected to sign-in');
+    const text = res.body;
+    let json: unknown;
+    const t = text.trimStart();
+    if (t.startsWith('{') || t.startsWith('[')) {
+      try {
+        json = JSON.parse(t);
+      } catch {
+        json = undefined;
+      }
+    }
+    return { status: res.status, json, text };
   }
 
   /** Store context (LAF header + pickup store), cached and single-flight. */

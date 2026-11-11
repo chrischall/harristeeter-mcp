@@ -94,3 +94,68 @@ needs a `paymentGram` from the same payment host, and is likewise left to the pa
 
 Related endpoints seen but not used: `POST /atlas/v1/post-order/v1/cancel-order`,
 `PUT /atlas/v1/checkout/v1/checkouts/update/lineitems/{id}`.
+
+## Savings, orders, recipes and lists (captured 2026-11-11)
+
+Status: **live** = exercised through the built server against a real account;
+**code** = taken from the site's bundles, not yet sent.
+
+| Feature | Request | Notes | Status |
+|---|---|---|---|
+| Upcoming orders | `GET /atlas/v1/post-order/v1/pending-order-summaries` | needs `x-application-name` (any value; `400` without) → `data.pendingOrderSummaries.data[]` | live (empty: entry shape unseen) |
+| Receipt detail | `POST /atlas/v1/purchase-history/v2/details` body `["<date>_<div>_<store>_<terminal>_<txn>"]` + `x-isreceipt: true` | the purchase list keys a receipt `div~store~date~terminal~txn`; reorder it. The site's own call adds `Akamai-BM-Telemetry` when available; without it the request worked once and later failed at the network layer ("Failed to fetch") while other POSTs still worked. Not worked around. | live, intermittent |
+| Coupons | `GET /atlas/v1/savings-coupons/v2/coupons?filter.status=unclipped\|active&page.size&page.offset[&filter.searchString]` | `active` = clipped; `meta.coupons.userSavingsInfoByType.standard` has the counts | live |
+| Clip / unclip | `POST /atlas/v1/savings-coupons/v1/clip-unclip` `{action:"CLIP"\|"UNCLIP", couponId}` | re-read to verify; round-tripped live | live |
+| My Specials | `GET /atlas/v1/savings-coupons/v1/ht-specials` | `data.htSpecials[]` | live |
+| Weekly ad | `GET /atlas/v1/savings-coupons/v1/ht-weekly-ads?filter.departmentNumber=N` | departmentNumber required; 1–18 answer (Produce … Beauty Care). The site's own weekly-ad page uses `api.kroger.com/digitalads` circulars instead — not needed. | live |
+| Savings alerts | `GET /atlas/v1/savings-coupons/v1/ht-savings-alerts` | `400 HT_Savings HTTP_EXCEPTION` upstream for the test account — not exposed | — |
+| Fuel points | `GET /atlas/v1/points/v1/program-summaries` | needs `user-time-zone` | live |
+| Recipe search | `GET /atlas/v1/recipe/recipes?filter.query=…&page.offset&page.size` | `filter.keyword` is ignored | live |
+| Recipe detail | `GET /atlas/v1/recipe/recipes/{id}?projections=recipes.full&filter.division=<3 digits>` | `400 MISSING_DIVISION` without the division | live |
+| Shopping lists | `GET /atlas/v1/shopping-list/v1/shopping-lists[/{listId}?projections=shoppingLists.full]` | `data.shoppingLists` | live |
+| List create / delete | `POST …/shopping-lists {name}`, `DELETE …/{listId}` | from the list-details bundle | code |
+| List items | `PUT …/{listId} {name, versionKey, lineItems}` | a guessed `{description, quantity}` item is accepted and silently dropped; the real item shape is the GET record of an existing item (pending a list that has one) | **not built** |
+
+## Order Ahead (`/fresh/api`)
+
+Deli counter, sandwich shop, pizzas, party/seafood platters, fruit baskets,
+bakery, holiday meals. A separate app with its own headers: `X-Kroger-Tenant:
+kroger` and `division: <DivisionCode>`, both from
+`GET /fresh/api/v1/locationId/<locationId>` → `{DivisionCode, StoreNumber}`
+(Harris Teeter: `HARR064`). Envelope `{Status:"success"|"failure", Data, Error}`.
+
+- `GET /fresh/api/v2/ffo/stores/{store}/sections/Fresh/departmentGroups` — live
+- `GET /fresh/api/v1/ffo/stores/{store}/departments/{_id}/products` — live
+- `GET /fresh/api/v1/ffo/stores/{store}/product/{productId}?includePriceVaries=true` — live
+- `POST /fresh/api/v2/ffo/stores/{store}/departments/timeslots` `{OrderDate, Items:[{DepartmentId}]}` → `["10:15 AM", …]` — live
+- `POST /fresh/api/v4/ffo/stores/{store}/orders?includePriceVaries=true` — **code only.**
+  Paid at pickup: no payment or fraud data in the body. The site PascalCases a
+  camelCase body (`itemNumbers`→`Quantity`, `oneItemTotal`→`Price`,
+  `topicId`→`DepartmentGroupId`, `upc`→`UPC`, `additionalComments`→`Note`) of
+  `{departmentGroupWithOrderItems:[{orderItems, orderDate, timeSlot, ASAP}], …customer, OrderSource:"Web", GUID:"orderAheadWeb"}`.
+  The cart is client-side only; the customer fields come from a checkout chunk
+  not yet read; there is no cancel endpoint. `ht_oa_place_order` is gated and
+  marked unverified until a real order is placed through it.
+
+## Pharmacy (`/rx/api`, `/rx-security`)
+
+Opening `harristeeter.com/rx` forces a **step-up sign-in with a one-time code**
+(text or email). The resulting pharmacy session lasts about an hour
+(`GET /rx-security/session` → `{active, sessionStatus:"AUTHORIZED", activeSecondsLeft}`);
+every pharmacy tool checks it first and asks the user to re-verify when it lapses.
+
+- `GET /rx/api/patient-profiles/` — patients; `patientNumber` is a 64-char hash — live
+- `GET /rx/api/prescription/patient/prescriptions?patientNumber&includePaymentCards=false&deliveryEligibility=true`
+  → `items[{rxNumber, drugName, primaryStatus, secondaryStatus, refillable, refillsRemainingCount, refillDueDate, lastRefillDate, promiseDateTime, patientPayAmount, prescriber, facility{vanityName, pharmacyHours}}]` — live.
+  The compact view drops addresses, birth date, insurance and card fields.
+- Refill (not built): add to `/rx/api/cart`, then `POST /rx/api/orders-stage`
+  `{userId, pickupTime, orderType:"RETAIL", facilityId, rxRecords:[{rxNumber, rxRecordNumber, patientNumber}], paymentType:"POINT_OF_SALE", loyaltyNumber, orderRevenue}`.
+  Pay-at-pharmacy needs no payment data; "pay now" (`PAYSYS`) goes through the
+  wallet and its fraud signals and stays out of scope. `userId`'s source is unconfirmed.
+
+## Bridge gotcha: pharmacy tabs swallow POSTs
+
+When every open harristeeter.com tab is a `/rx/…` page, POSTs relayed through it
+never answer (30 s bridge timeout) while GETs still work — so the store-context
+call, and everything after it, stalls. Keep a regular harristeeter.com tab open.
+A timed-out POST now carries that hint.
