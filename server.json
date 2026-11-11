@@ -35,6 +35,25 @@
           "format": "string"
         },
         {
+          "name": "KROGER_API_CLIENT_ID",
+          "description": "Optional Kroger developer app id: product search and prices without the browser.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "KROGER_API_CLIENT_SECRET",
+          "description": "Optional Kroger developer app secret.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "HARRISTEETER_LOCATION_ID",
+          "description": "Optional 8-digit store id for bridge-free search (see ht_find_stores).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
           "name": "FETCHPROXY_WS_HOST",
           "description": "Bind interface for the fetchproxy concentrator (default 127.0.0.1; a literal IP only). For a hosted child in its own network namespace only — never bind a laptop's concentrator to the network.",
           "isRequired": false,

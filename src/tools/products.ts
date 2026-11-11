@@ -2,18 +2,32 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { toolAnnotations } from '@chrischall/mcp-utils';
 import type { HtClient } from '../client.js';
+import { KrogerApi, compactApiProduct, configuredLocationId } from '../api/kroger.js';
+import { toGtin13 } from '../client.js';
+import { McpToolError } from '@chrischall/mcp-utils';
 import { compactProduct } from '../project.js';
 import { viewArg, viewResponse } from '../view.js';
 import { foodMeta } from './hints.js';
 
 const Upc = z.string().regex(/^\d{1,14}$/, 'digits only').describe('Product UPC as returned by ht_search_products (13 digits, leading zeros kept).');
 
-export function registerProductTools(server: McpServer, client: HtClient): void {
+/** The store the API path prices against: HARRISTEETER_LOCATION_ID, else the bridge's pickup store. */
+async function apiLocation(client: HtClient): Promise<string> {
+  const configured = configuredLocationId();
+  if (configured) return configured;
+  const fromBridge = (await client.preferences()).pickup?.locationId;
+  if (!fromBridge) {
+    throw new McpToolError('No store to price against.', { hint: 'Set HARRISTEETER_LOCATION_ID (find one with ht_find_stores).' });
+  }
+  return fromBridge;
+}
+
+export function registerProductTools(server: McpServer, client: HtClient, kroger: KrogerApi = new KrogerApi({ clientId: '', clientSecret: '' })): void {
   server.registerTool(
     'ht_search_products',
     {
       description:
-        'Search Harris Teeter groceries by keyword at your pickup store — returns UPC, name, brand, size, price, sale price, unit price and pickup stock. Use the UPC with ht_add_to_cart.',
+        'Search Harris Teeter groceries by keyword at your pickup store — returns UPC, name, brand, size, price, sale price, unit price and pickup stock. Use the UPC with ht_add_to_cart. With Kroger API credentials set it runs without the browser (source: api.kroger.com); that API prices produce per pound where the website prices it per item.',
       annotations: toolAnnotations({ title: 'Search groceries', openWorld: true }),
       inputSchema: z.object({
         query: z.string().trim().min(1).max(200).describe('What to search for, e.g. "2% milk" or "bananas".'),
@@ -25,6 +39,15 @@ export function registerProductTools(server: McpServer, client: HtClient): void 
       _meta: foodMeta('lookup', { aliases: ['groceries', 'harris teeter', 'grocery search'] }),
     },
     async ({ query, limit, offset, pickupOnly, view }) => {
+      if (kroger.configured) {
+        // Bridge-free: Kroger's official API (no browser needed).
+        const r = await kroger.searchProducts(query, { locationId: await apiLocation(client), limit: limit ?? 10, offset: offset ?? 0, pickupOnly: pickupOnly !== false });
+        const products = r.products;
+        return viewResponse(view, { total: r.total, offset: offset ?? 0, source: 'api.kroger.com', products }, (d) => {
+          const x = d as { total?: number; offset: number; source: string; products: Record<string, unknown>[] };
+          return { total: x.total, offset: x.offset, source: x.source, products: x.products.map(compactApiProduct) };
+        });
+      }
       const { total, hits } = await client.searchProducts(query, { limit, offset, pickupOnly: pickupOnly !== false });
       const upcs = hits.map((h) => h.upc).filter((u): u is string => typeof u === 'string');
       const products = await client.getProducts(upcs);
@@ -54,9 +77,38 @@ export function registerProductTools(server: McpServer, client: HtClient): void 
       _meta: foodMeta('lookup'),
     },
     async ({ upcs, view }) => {
+      if (kroger.configured) {
+        const loc = await apiLocation(client);
+        const found = [];
+        for (const u of upcs) {
+          const p = await kroger.getProduct(toGtin13(u), loc);
+          if (p) found.push(p);
+        }
+        return viewResponse(view, found, (d) => (d as Record<string, unknown>[]).map(compactApiProduct));
+      }
       const products = await client.getProducts(upcs);
       return viewResponse(view, products, (d) =>
         (d as Record<string, unknown>[]).map((p) => compactProduct(p)).filter(Boolean),
+      );
+    },
+  );
+
+  server.registerTool(
+    'ht_find_stores',
+    {
+      description:
+        'Find Harris Teeter stores near a ZIP code — name, address and the 8-digit location id (set HARRISTEETER_LOCATION_ID to search prices there without the browser). Needs Kroger API credentials.',
+      annotations: toolAnnotations({ title: 'Find stores', openWorld: true }),
+      inputSchema: z.object({ zip: z.string().regex(/^\d{5}$/), limit: z.number().int().min(1).max(20).default(5) }),
+      _meta: foodMeta('lookup', { aliases: ['harris teeter near me', 'store locator'] }),
+    },
+    async ({ zip, limit }) => {
+      const stores = await kroger.findStores(zip, limit ?? 5);
+      return viewResponse(undefined, stores, (d) =>
+        (d as Record<string, unknown>[]).map((l) => {
+          const a = (l.address ?? {}) as Record<string, unknown>;
+          return { locationId: l.locationId, name: l.name, address: [a.addressLine1, a.city, a.state, a.zipCode].filter(Boolean).join(', '), phone: l.phone };
+        }),
       );
     },
   );

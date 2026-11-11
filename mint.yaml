@@ -23,6 +23,21 @@ env:
     required: false
     help: >-
       IANA time zone sent with pickup-time requests (default America/New_York).
+  - name: KROGER_API_CLIENT_ID
+    required: false
+    help: >-
+      Optional Kroger developer app id (developer.kroger.com). With the secret,
+      product search and prices work without the browser.
+  - name: KROGER_API_CLIENT_SECRET
+    secret: true
+    required: false
+    help: >-
+      Optional Kroger developer app secret.
+  - name: HARRISTEETER_LOCATION_ID
+    required: false
+    help: >-
+      Optional 8-digit store id for bridge-free search (find one with
+      ht_find_stores). Default: the store chosen in the signed-in browser.
 state:
   dataDir: true
   reason: >-
@@ -30,10 +45,14 @@ state:
     and the pair code derives from it. Without a persistent $HOME every cold
     start mints a fresh identity and re-prompts pairing in the browser; the
     API refuses bridge without it.
-# No egress block: this process makes no network call of its own. Every
-# request (www.harristeeter.com/atlas/v1/…) is dialled by the user's browser
-# tab over the bridge — Akamai resets any server-side connection — so the
-# server needs no outbound host.
+egress:
+  allow:
+    # The only host this process dials itself: Kroger's official API, used for
+    # product search and store lookup when KROGER_API_CLIENT_ID/_SECRET are set
+    # (src/api/kroger.ts). Every www.harristeeter.com request is made by the
+    # user's browser tab over the bridge — Akamai resets server-side
+    # connections — so it is not listed.
+    - api.kroger.com
 examples:
   - prompt: >-
       Add 2% milk, a dozen eggs and bananas to my Harris Teeter cart.
