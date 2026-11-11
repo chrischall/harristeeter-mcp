@@ -154,6 +154,8 @@ export interface HtClientOptions {
   timeZone?: string;
   /** How long the store context is trusted before re-reading it. Default 10 min. */
   prefsTtlMs?: number;
+  /** Called with the pickup store each time the store context is read (remembered for bridge-free search). */
+  onStore?: (store: { locationId: string; name?: string }) => void | Promise<void>;
   now?: () => number;
 }
 
@@ -162,6 +164,7 @@ export class HtClient {
   private readonly timeZone: string;
   private readonly prefsTtlMs: number;
   private readonly now: () => number;
+  private readonly onStore?: HtClientOptions['onStore'];
   private prefs?: { value: StorePreferences; at: number };
   private prefsInFlight?: Promise<StorePreferences>;
 
@@ -170,6 +173,7 @@ export class HtClient {
     this.timeZone = resolveTimeZone(opts.timeZone);
     this.prefsTtlMs = opts.prefsTtlMs ?? 10 * 60_000;
     this.now = opts.now ?? Date.now;
+    this.onStore = opts.onStore;
   }
 
   start(): Promise<void> {
@@ -268,6 +272,9 @@ export class HtClient {
         );
         const value = extractPreferences(json?.data?.modalityPreferences);
         this.prefs = { value, at: this.now() };
+        if (value.pickup && this.onStore) {
+          await Promise.resolve(this.onStore({ locationId: value.pickup.locationId, ...(value.pickup.name ? { name: value.pickup.name } : {}) })).catch(() => {});
+        }
         return value;
       })().finally(() => {
         this.prefsInFlight = undefined;
