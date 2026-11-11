@@ -321,3 +321,49 @@ describe('shopping-list items', () => {
     expect(calls.some((c) => c.method === 'PUT')).toBe(false);
   });
 });
+
+describe('Order Ahead response handling (follow-up #3)', () => {
+  const base = (over: (path: string, method: string) => unknown) =>
+    makeClient(
+      withPrefs((init, { path }) => {
+        const r = over(path, init.method);
+        if (r !== undefined) return r;
+        if (path.startsWith('/fresh/api/v1/locationId/')) return { Status: 'success', Data: { DivisionCode: 'TEST001', StoreNumber: 7 } };
+        throw new Error(`unscripted ${path}`);
+      }),
+    );
+
+  it('treats a 4xx/5xx JSON reply without a Status as an error, not data', async () => {
+    const { client } = base((p) => (p.includes('/departmentGroups') ? { status: 500, body: JSON.stringify({ Message: 'boom' }) } : undefined));
+    const err = await failure(departmentGroups(client));
+    expect(err.message).toMatch(/500/);
+  });
+
+  it('treats a 200 without Status "success" as an error', async () => {
+    const { client } = base((p) => (p.includes('/departmentGroups') ? { Data: [] } : undefined));
+    expect((await failure(departmentGroups(client))).message).toMatch(/unexpected|no Status/i);
+  });
+
+  it('ht_oa_place_order reports an UNKNOWN outcome (not placed, not a plain error) when the order POST gets a 5xx', async () => {
+    const { registerOrderAheadTools } = await import('../src/tools/orderahead.js');
+    const PRODUCT = { ProductId: 'p'.repeat(24).replace(/p/g, 'a'), ProductName: 'Test Sub', Price: '8.49', UPC: '1', DepartmentId: 'b'.repeat(24), DepartmentGroupId: 'g1' };
+    const { client, calls } = base((p, m) => {
+      if (p.includes('/product/')) return { Status: 'success', Data: PRODUCT };
+      if (p.includes('/departments/timeslots')) return { Status: 'success', Data: ['10:15 AM'] };
+      if (p.includes('/customer-profile/')) return { data: { profile: { firstName: 'T', lastName: 'U', contactInfo: { phones: [], emails: [] } } } };
+      if (m === 'POST' && p.includes('/orders')) return { status: 502, body: JSON.stringify({ Message: 'gateway' }) };
+      return undefined;
+    });
+    const h = await createTestHarness((s) => registerOrderAheadTools(s, client));
+    const args = { date: '2030-01-01', time: '10:15 AM', items: [{ productId: PRODUCT.ProductId, quantity: 1 }] };
+    const preview = JSON.stringify(await h.callTool('ht_oa_place_order', args)).replace(/\\"/g, '"');
+    const token = /"confirmToken"\s*:\s*"([^"]+)"/.exec(preview)![1];
+    const res = await h.callTool('ht_oa_place_order', { ...args, confirmToken: token });
+    await h.close();
+    expect(res.isError).not.toBe(true);
+    const out = parseToolResult<{ status?: string; placed?: boolean }>(res);
+    expect(out.status).toBe('unknown');
+    expect(out.placed).not.toBe(true);
+    expect(calls.filter((c) => c.method === 'POST' && c.path.includes('/orders'))).toHaveLength(1);
+  });
+});

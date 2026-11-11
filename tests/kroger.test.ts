@@ -71,7 +71,7 @@ describe('KrogerApi', () => {
       brand: 'Fresh',
       size: '1 lb',
       price: 0.99,
-      stock: 'HIGH',
+      pickupStock: 'HIGH',
       pickup: true,
     });
   });
@@ -116,5 +116,49 @@ describe('ht_search_products routing', () => {
     await h.callTool('ht_search_products', { query: 'bananas' });
     await h.close();
     expect(calls.some((c) => c.path.includes('/atlas/v1/search/v1/products-search'))).toBe(true);
+  });
+});
+
+describe('one result shape whichever path served it (follow-up #5)', () => {
+  const SHARED = ['upc', 'description', 'brand', 'size', 'price', 'salePrice', 'unitPrice', 'pickupStock', 'maxQuantity', 'aisle', 'pickup'];
+
+  it('the API path names its stock pickupStock, says where it came from, and flags per-pound produce pricing', async () => {
+    process.env.HARRISTEETER_LOCATION_ID = '09700111';
+    const { api } = fakeKroger(() => ({ data: [PRODUCT], meta: { pagination: { total: 1 } } }));
+    const { client } = makeClient(() => {
+      throw new Error('bridge must not be called');
+    });
+    const h = await createTestHarness((s) => registerProductTools(s, client, api));
+    const out = parseToolResult<{ source: string; note?: string; products: Record<string, unknown>[] }>(await h.callTool('ht_search_products', { query: 'bananas' }));
+    await h.close();
+    expect(out.source).toBe('api.kroger.com');
+    expect(out.note).toMatch(/per pound/);
+    expect(out.products[0]).toHaveProperty('pickupStock', 'HIGH');
+    expect(out.products[0]).not.toHaveProperty('stock');
+    for (const k of Object.keys(out.products[0]!)) expect(SHARED, k).toContain(k);
+  });
+
+  it('the bridge path says where it came from too, with the same field names', async () => {
+    const { client } = makeClient((_i, { path }) => {
+      if (path.endsWith('/modality/preferences')) return PREFS;
+      if (path.includes('/search/')) return { data: { productsSearch: [{ upc: '0000000000011' }] }, meta: { productsSearch: { totalCount: 1 } } };
+      return {
+        data: {
+          products: [
+            {
+              item: { upc: '0000000000011', description: 'Milk', brand: { name: 'B' }, customerFacingSize: '1 gal' },
+              price: { storePrices: { regular: { price: 'USD 3.00' } } },
+              inventorySummaries: [{ modalityType: 'PICKUP', stockLevel: 'HIGH' }],
+            },
+          ],
+        },
+      };
+    });
+    const h = await createTestHarness((s) => registerProductTools(s, client, new KrogerApi({ clientId: '', clientSecret: '' })));
+    const out = parseToolResult<{ source: string; products: Record<string, unknown>[] }>(await h.callTool('ht_search_products', { query: 'milk' }));
+    await h.close();
+    expect(out.source).toBe('harristeeter.com');
+    expect(out.products[0]).toHaveProperty('pickupStock', 'HIGH');
+    for (const k of Object.keys(out.products[0]!)) expect(SHARED, k).toContain(k);
   });
 });

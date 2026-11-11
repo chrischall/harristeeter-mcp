@@ -1,6 +1,6 @@
 import type { McpServer, ServerContext } from '@modelcontextprotocol/server';
 import { z } from 'zod';
-import { toolAnnotations, minifiedResult, McpToolError, IsoDate, confirmWrite, confirmTokenParam, CONFIRM_FLOW_SENTENCE } from '@chrischall/mcp-utils';
+import { toolAnnotations, minifiedResult, McpToolError, IsoDate, confirmWrite, confirmTokenParam, CONFIRM_FLOW_SENTENCE, errorStatusOf, errorKindOf, messageOf } from '@chrischall/mcp-utils';
 import type { HtClient } from '../client.js';
 import { departmentGroups, departmentProducts, product, pickupTimes, placeOrder } from '../api/fresh.js';
 import { viewArg, viewResponse } from '../view.js';
@@ -153,7 +153,23 @@ export function registerOrderAheadTools(server: McpServer, client: HtClient): vo
         confirmToken,
       });
       if (gate) return gate;
-      const result = await placeOrder(client, body);
+      let result: unknown;
+      try {
+        result = await placeOrder(client, body);
+      } catch (err) {
+        // The order was sent: a 5xx or a timeout does not say it failed. Report
+        // "unknown" rather than an error, which would invite a duplicate order.
+        const status = errorStatusOf(err);
+        if ((status !== undefined && status >= 500) || errorKindOf(err) === 'timeout' || (err as Error)?.name === 'FetchproxyTimeoutError') {
+          return minifiedResult({
+            status: 'unknown',
+            pickup: `${date} ${time}`,
+            reason: messageOf(err),
+            next: 'The order may or may not have gone through. Check your email for an Order Ahead confirmation, or call the store, before placing it again.',
+          });
+        }
+        throw err;
+      }
       return minifiedResult({ placed: true, pickup: `${date} ${time}`, estimatedTotal: total.toFixed(2), result });
     },
   );
