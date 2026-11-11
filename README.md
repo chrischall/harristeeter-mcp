@@ -78,9 +78,11 @@ again with the returned `confirmToken`.
 
 ### Pharmacy needs its own sign-in
 
-Opening harristeeter.com/rx asks you to sign in again with a one-time code, and that pharmacy
-session lasts about an hour. When it lapses the `ht_rx_*` tools say so; sign in again at
-https://www.harristeeter.com/rx/dashboard. Keep a regular harristeeter.com tab open as well, because
+Opening harristeeter.com/rx asks you to sign in again (with a one-time code the first time on a
+browser). Pharmacy access then lasts **one hour from sign-in**, and nothing extends it. When it
+lapses the `ht_rx_*` tools say so; sign in again at https://www.harristeeter.com/rx/dashboard.
+If a pharmacy tab is open when the hour ends, the site signs you out of harristeeter.com
+entirely, so the grocery tools need a fresh sign-in too. Keep a regular harristeeter.com tab open as well, because
 the bridge can't send some requests from a pharmacy page.
 
 ### Why it can't press "Place Order"

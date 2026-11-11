@@ -139,10 +139,31 @@ kroger` and `division: <DivisionCode>`, both from
 
 ## Pharmacy (`/rx/api`, `/rx-security`)
 
-Opening `harristeeter.com/rx` forces a **step-up sign-in with a one-time code**
-(text or email). The resulting pharmacy session lasts about an hour
-(`GET /rx-security/session` → `{active, sessionStatus:"AUTHORIZED", activeSecondsLeft}`);
-every pharmacy tool checks it first and asks the user to re-verify when it lapses.
+Opening `harristeeter.com/rx` forces a **step-up sign-in** (`prompt=login`). The
+first time on a browser it also asks for a **one-time code** (text or email);
+after that `/rx-security/customer/status` reports `knownMachine: true` and a
+repeat sign-in on that browser skips the code.
+
+Session lifetime (measured 2026-11-11 on a real account):
+
+- `GET /rx-security/session` → `{active, sessionStatus:"AUTHORIZED", activeSecondsLeft, lastAccessed}`.
+  `activeSecondsLeft` counts down from **one hour after `lastAccessed`**, and
+  `lastAccessed` is the sign-in time.
+- **Use does not extend it.** Pharmacy data reads left `lastAccessed` and the
+  countdown untouched.
+- **The extend call does not extend it either.** The bundle's `extendSession` is
+  `PUT /rx-security/rx-security-api/session {active:true}` (`/rx-security/session`
+  answers 501). It returns 200 with the session but moved nothing — tried with
+  58 minutes left and again with 8½ minutes left.
+- **At expiry the whole site signs out.** One minute after the hour, the pharmacy
+  session read `ANONYMOUS` and a grocery read (`GET /atlas/v1/carts`) answered
+  `401 AUTH_REQUIRED`; the open pharmacy tab had been sent to
+  `/rx/landing-page?…errorCode=sessionTimeout`. The bundle's timeout handler calls
+  `/auth/api/logout`, so an open pharmacy tab is the likely cause — not verified
+  with no pharmacy tab open.
+
+Every pharmacy tool checks the session first and asks the user to sign in again
+when it lapses.
 
 - `GET /rx/api/patient-profiles/` — patients; `patientNumber` is a 64-char hash — live
 - `GET /rx/api/prescription/patient/prescriptions?patientNumber&includePaymentCards=false&deliveryEligibility=true`

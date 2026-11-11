@@ -57,7 +57,7 @@ export function registerPharmacyTools(server: McpServer, client: HtClient): void
     'ht_rx_session',
     {
       description:
-        'Check whether the Harris Teeter pharmacy session is active. Pharmacy access needs a separate sign-in with a one-time code at harristeeter.com/rx and lasts about an hour.',
+        'Check whether the Harris Teeter pharmacy session is active. Pharmacy access needs a separate sign-in at harristeeter.com/rx (a one-time code on a browser it does not know) and lasts one hour from sign-in; it cannot be extended.',
       annotations: toolAnnotations({ title: 'Pharmacy session', openWorld: true }),
       inputSchema: z.object({}),
       _meta: healthMeta('lookup'),
@@ -66,7 +66,7 @@ export function registerPharmacyTools(server: McpServer, client: HtClient): void
       const s = await rxSession(client);
       return minifiedResult({
         ...s,
-        ...(s.active ? {} : { next: 'Open https://www.harristeeter.com/rx/dashboard in the bridge browser and sign in (one-time code).' }),
+        ...(s.active ? {} : { next: 'Open https://www.harristeeter.com/rx/dashboard in the bridge browser and sign in again (one-time code only on a new browser).' }),
       });
     },
   );
