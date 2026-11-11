@@ -1,0 +1,46 @@
+version: 1
+name: Harris Teeter
+slug: harristeeter
+# BROWSER-BRIDGE MCP: every request reaches harristeeter.com through the
+# user's signed-in tab via the fetchproxy bridge, so a registration also needs
+# runtime fly-shared, bridge: true and bridgePortEnv HARRISTEETER_WS_PORT —
+# registration fields this manifest has no schema for. state.dataDir below is
+# required for bridge and is why it is declared.
+summary: >-
+  Harris Teeter grocery pickup for Claude — search products with prices, build
+  the cart, see pickup times and start checkout via your signed-in browser tab.
+  You press Place Order on harristeeter.com yourself.
+env:
+  - name: HARRISTEETER_WS_PORT
+    required: false
+    help: >-
+      Override the fetchproxy WebSocket port (default 37149).
+  - name: HARRISTEETER_DEBUG
+    required: false
+    help: >-
+      Set to 1 for verbose bridge logging to stderr.
+  - name: MCP_USER_TZ
+    required: false
+    help: >-
+      IANA time zone sent with pickup-time requests (default America/New_York).
+state:
+  dataDir: true
+  reason: >-
+    The fetchproxy identity lives at $HOME/.fetchproxy/identity/harristeeter-mcp.json
+    and the pair code derives from it. Without a persistent $HOME every cold
+    start mints a fresh identity and re-prompts pairing in the browser; the
+    API refuses bridge without it.
+# No egress block: this process makes no network call of its own. Every
+# request (www.harristeeter.com/atlas/v1/…) is dialled by the user's browser
+# tab over the bridge — Akamai resets any server-side connection — so the
+# server needs no outbound host.
+examples:
+  - prompt: >-
+      Add 2% milk, a dozen eggs and bananas to my Harris Teeter cart.
+    note: Searches each item at the pickup store, then adds the chosen UPCs.
+  - prompt: >-
+      What pickup times are open tomorrow evening for my Harris Teeter order?
+    note: Lists pickup windows and fees for the current cart.
+  - prompt: >-
+      Check out my Harris Teeter cart for the 5–6 PM pickup tomorrow.
+    note: Previews, then reserves the window and creates the checkout; you place the order in the browser.

@@ -1,0 +1,121 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/dxt/main/dist/mcpb-manifest.schema.json",
+  "manifest_version": "0.3",
+  "name": "harristeeter-mcp",
+  "display_name": "Harris Teeter",
+  "version": "0.0.0",
+  "description": "Harris Teeter grocery pickup for Claude — search products, build the cart, pick a pickup time and start checkout",
+  "author": {
+    "name": "Chris Chall",
+    "email": "chris.c.hall@gmail.com",
+    "url": "https://github.com/chrischall"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrischall/harristeeter-mcp"
+  },
+  "homepage": "https://github.com/chrischall/harristeeter-mcp",
+  "support": "https://github.com/chrischall/harristeeter-mcp/issues",
+  "license": "MIT",
+  "keywords": [
+    "harris-teeter",
+    "groceries",
+    "grocery-pickup",
+    "kroger"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/bundle.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/bundle.js"
+      ],
+      "env": {
+        "HARRISTEETER_WS_PORT": "${user_config.harristeeter_ws_port}",
+        "HARRISTEETER_DEBUG": "${user_config.harristeeter_debug}",
+        "MCP_USER_TZ": "${user_config.mcp_user_tz}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "ht_search_products",
+      "description": "Search Harris Teeter groceries at your pickup store, with prices and stock"
+    },
+    {
+      "name": "ht_get_products",
+      "description": "Look up products by UPC: price, sale price, size and pickup stock"
+    },
+    {
+      "name": "ht_get_cart",
+      "description": "Show the cart with names, prices and an estimated subtotal"
+    },
+    {
+      "name": "ht_add_to_cart",
+      "description": "Add groceries to the cart by UPC"
+    },
+    {
+      "name": "ht_update_cart_item",
+      "description": "Set an item's quantity or substitution preference"
+    },
+    {
+      "name": "ht_remove_from_cart",
+      "description": "Remove items from the cart"
+    },
+    {
+      "name": "ht_get_store",
+      "description": "Show the pickup store this account shops at"
+    },
+    {
+      "name": "ht_list_timeslots",
+      "description": "List available pickup windows and fees for the cart"
+    },
+    {
+      "name": "ht_start_checkout",
+      "description": "Reserve a pickup window and create the checkout (you place the order on harristeeter.com)"
+    },
+    {
+      "name": "ht_get_checkout",
+      "description": "Show the checkout draft: items, window, fees, tax, total and the place-order link"
+    },
+    {
+      "name": "ht_list_orders",
+      "description": "List past purchases and receipts"
+    },
+    {
+      "name": "ht_healthcheck",
+      "description": "Check the fetchproxy browser-bridge connection"
+    }
+  ],
+  "user_config": {
+    "harristeeter_ws_port": {
+      "type": "string",
+      "title": "fetchproxy port (advanced)",
+      "description": "Override the fetchproxy concentrator port (default 37149). The whole fetchproxy fleet shares 37149 and the ContextMint Bridge extension dials that one port, so change this only if you know why.",
+      "required": false
+    },
+    "harristeeter_debug": {
+      "type": "string",
+      "title": "Debug logging",
+      "description": "Set to 1 for verbose bridge logging to stderr.",
+      "required": false
+    },
+    "mcp_user_tz": {
+      "type": "string",
+      "title": "Time zone",
+      "description": "IANA time zone sent with pickup-time requests (default America/New_York).",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.5.0"
+    }
+  }
+}

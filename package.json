@@ -1,0 +1,65 @@
+{
+  "name": "@chrischall/harristeeter-mcp",
+  "version": "0.0.0",
+  "mcpName": "io.github.chrischall/harristeeter-mcp",
+  "description": "Harris Teeter MCP server for Claude — developed and maintained by AI (Claude Code)",
+  "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chrischall/harristeeter-mcp.git"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "ai",
+    "harris-teeter",
+    "groceries",
+    "grocery-pickup",
+    "kroger"
+  ],
+  "type": "module",
+  "bin": {
+    "harristeeter-mcp": "dist/bundle.js"
+  },
+  "files": [
+    "dist",
+    ".claude-plugin",
+    ".mcp.json",
+    "server.json",
+    "skills",
+    "mint.yaml"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit && npm run bundle",
+    "bundle": "esbuild src/index.ts --bundle --alias:zod/v4=./node_modules/zod/v4/index.cjs --platform=node --format=esm --banner:js='import { createRequire as __createRequire } from \"module\"; const require = __createRequire(import.meta.url);' --outfile=dist/bundle.js",
+    "dev": "node dist/bundle.js",
+    "test": "npm run typecheck && vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "npm run typecheck && vitest run --coverage",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@chrischall/mcp-utils": "^3.8.0",
+    "@fetchproxy/server": "^3.8.0",
+    "@modelcontextprotocol/server": "^2.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.0",
+    "@types/node": "^26.0.0",
+    "@vitest/coverage-v8": "^5.0.0",
+    "esbuild": "^0.28.1",
+    "tsx": "^4.19.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "fsevents": false
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.chrischall/harristeeter-mcp",
+  "description": "Harris Teeter grocery pickup — search, cart, pickup times and checkout via your browser",
+  "repository": {
+    "url": "https://github.com/chrischall/harristeeter-mcp",
+    "source": "github"
+  },
+  "version": "0.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@chrischall/harristeeter-mcp",
+      "version": "0.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "HARRISTEETER_WS_PORT",
+          "description": "Override the fetchproxy WebSocket port (default 37149).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "HARRISTEETER_DEBUG",
+          "description": "Set to 1 for verbose bridge logging to stderr.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_USER_TZ",
+          "description": "IANA time zone sent with pickup-time requests (default America/New_York).",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "FETCHPROXY_WS_HOST",
+          "description": "Bind interface for the fetchproxy concentrator (default 127.0.0.1; a literal IP only). For a hosted child in its own network namespace only — never bind a laptop's concentrator to the network.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "FETCHPROXY_IDENTITY_DIR",
+          "description": "Absolute path where fetchproxy stores its long-term identity keypair (default ~/.fetchproxy/identity/). For a host that runs a separate child per caller, so they share one identity.",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

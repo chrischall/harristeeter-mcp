@@ -1,0 +1,22 @@
+{
+  "name": "harristeeter-mcp",
+  "displayName": "Harris Teeter",
+  "version": "0.0.0",
+  "description": "Harris Teeter grocery pickup for Claude — search, cart, pickup times and checkout",
+  "author": {
+    "name": "Chris Hall",
+    "email": "chris.c.hall@gmail.com"
+  },
+  "homepage": "https://github.com/chrischall/harristeeter-mcp",
+  "repository": "https://github.com/chrischall/harristeeter-mcp",
+  "license": "MIT",
+  "keywords": [
+    "harris-teeter",
+    "groceries",
+    "grocery-pickup",
+    "kroger",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

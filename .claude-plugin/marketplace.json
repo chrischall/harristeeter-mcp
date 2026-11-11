@@ -1,0 +1,35 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "harristeeter-mcp",
+  "owner": {
+    "name": "Chris Hall",
+    "email": "chris.c.hall@gmail.com"
+  },
+  "metadata": {
+    "description": "Harris Teeter grocery pickup for Claude — search products with prices, build the cart, list pickup times and start checkout. harristeeter.com serves its API only to a real browser, so every request routes through the user's own signed-in harristeeter.com tab via the ContextMint Bridge browser extension, reusing their session. Placing the order stays a click in the browser.",
+    "version": "0.0.0"
+  },
+  "plugins": [
+    {
+      "name": "harristeeter-mcp",
+      "displayName": "Harris Teeter",
+      "source": "./",
+      "description": "MCP server for Harris Teeter — groceries, cart, pickup times and checkout",
+      "version": "0.0.0",
+      "author": {
+        "name": "Chris Hall"
+      },
+      "homepage": "https://github.com/chrischall/harristeeter-mcp",
+      "repository": "https://github.com/chrischall/harristeeter-mcp",
+      "license": "MIT",
+      "keywords": [
+        "harris-teeter",
+        "groceries",
+        "grocery-pickup",
+        "kroger",
+        "mcp"
+      ],
+      "category": "productivity"
+    }
+  ]
+}
