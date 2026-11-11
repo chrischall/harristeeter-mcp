@@ -4,15 +4,15 @@
  * The shape is fixed by the host's contract, so it is restated here rather
  * than imported — this server takes no dependency on mcp-host.
  *
- * harristeeter-mcp sits in the `food` group. Nothing here answers a
- * what's-new / what's-due / what's-on question (there is no read for an
- * upcoming pickup yet), so no tool is canonical and none names a subject.
+ * Grocery tools sit in the `food` group; the pharmacy tools in `health`.
+ * No read is canonical yet: upcoming orders and refill status have not been
+ * observed with real data, and a canonical read needs a verified brief view.
  */
 export type MintIntent =
   | 'whats-new' | 'whats-due' | 'whats-on' | 'lookup' | 'turn-on-off' | 'send' | 'change' | 'other';
 
 export interface MintHint {
-  domain: 'food';
+  domain: 'food' | 'health';
   intent: MintIntent;
   canonical?: true;
   subject?: string;
@@ -25,4 +25,11 @@ export function foodMeta(
   extra: Omit<MintHint, 'domain' | 'intent'> = {},
 ): { mint: MintHint } {
   return { mint: { domain: 'food', intent, ...extra } };
+}
+
+export function healthMeta(
+  intent: MintIntent,
+  extra: Omit<MintHint, 'domain' | 'intent'> = {},
+): { mint: MintHint } {
+  return { mint: { domain: 'health', intent, ...extra } };
 }

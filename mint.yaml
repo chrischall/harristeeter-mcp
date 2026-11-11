@@ -7,9 +7,9 @@ slug: harristeeter
 # registration fields this manifest has no schema for. state.dataDir below is
 # required for bridge and is why it is declared.
 summary: >-
-  Harris Teeter grocery pickup for Claude — search products with prices, build
-  the cart, see pickup times and start checkout via your signed-in browser tab.
-  You press Place Order on harristeeter.com yourself.
+  Harris Teeter for Claude via your signed-in browser tab — groceries, cart,
+  pickup times and checkout (you press Place Order), digital coupons, weekly ad,
+  fuel points, receipts, recipes, shopping lists, Order Ahead and prescriptions.
 env:
   - name: HARRISTEETER_WS_PORT
     required: false
@@ -44,3 +44,10 @@ examples:
   - prompt: >-
       Check out my Harris Teeter cart for the 5–6 PM pickup tomorrow.
     note: Previews, then reserves the window and creates the checkout; you place the order in the browser.
+  - prompt: >-
+      Clip any Harris Teeter coupons for coffee and tell me what's on sale in
+      produce this week.
+    note: Lists and clips e-VIC coupons, then reads the weekly ad.
+  - prompt: >-
+      Which of my prescriptions can I refill at Harris Teeter?
+    note: Needs an active pharmacy session (sign in at harristeeter.com/rx).

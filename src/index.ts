@@ -16,6 +16,11 @@ import { registerProductTools } from './tools/products.js';
 import { registerCartTools } from './tools/cart.js';
 import { registerCheckoutTools } from './tools/checkout.js';
 import { registerOrderTools } from './tools/orders.js';
+import { registerSavingsTools } from './tools/savings.js';
+import { registerRecipeTools } from './tools/recipes.js';
+import { registerListTools } from './tools/lists.js';
+import { registerOrderAheadTools } from './tools/orderahead.js';
+import { registerPharmacyTools } from './tools/pharmacy.js';
 import { registerHealthcheckTools } from './tools/healthcheck.js';
 
 const port = readPortEnv('HARRISTEETER_WS_PORT', DEFAULT_PORT);
@@ -32,6 +37,11 @@ await runMcp({
     (server) => registerCartTools(server, client),
     (server) => registerCheckoutTools(server, client),
     (server) => registerOrderTools(server, client),
+    (server) => registerSavingsTools(server, client),
+    (server) => registerRecipeTools(server, client),
+    (server) => registerListTools(server, client),
+    (server) => registerOrderAheadTools(server, client),
+    (server) => registerPharmacyTools(server, client),
     (server) => registerHealthcheckTools(server, client, transport),
   ],
   banner:
