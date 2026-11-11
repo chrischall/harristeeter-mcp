@@ -27,8 +27,17 @@ call even though the call succeeds. Don't approve those; that's the other browse
 Product search, prices and store lookup can run without the bridge through Kroger's official
 API. Register an app at [developer.kroger.com](https://developer.kroger.com) and set
 `KROGER_API_CLIENT_ID` and `KROGER_API_CLIENT_SECRET`. `ht_search_products`, `ht_get_products` and
-`ht_find_stores` then call `api.kroger.com` directly, pricing against `HARRISTEETER_LOCATION_ID`
-(use `ht_find_stores` to look it up) or the store chosen in your browser. Results have the same
+`ht_find_stores` then call `api.kroger.com` directly, pricing against a store chosen in this order:
+
+1. a `zip` or `locationId` you pass for that one search;
+2. the store you saved with `ht_set_store` ("use my Park Road store");
+3. `HARRISTEETER_LOCATION_ID`;
+4. the store last seen in your browser, remembered whenever the bridge reads it, so the
+   server keeps pricing at your store when the browser is closed;
+5. your browser's store, read live through the bridge.
+
+`ht_get_store` shows which one is in use and why. Cart, pickup times and checkout always use the
+store chosen on harristeeter.com. Results have the same
 fields either way and say which `source` served them; the API prices produce per pound, and each
 API result says so. Everything else (cart,
 checkout, coupons, lists, Order Ahead, pharmacy) still needs the bridge: Kroger's API sign-in
@@ -55,7 +64,8 @@ doesn't accept Harris Teeter accounts, so it can't act on your account.
 | `ht_add_to_cart` | Add items by UPC (adds to existing quantity) |
 | `ht_update_cart_item` | Set quantity / substitution preference (0 removes) |
 | `ht_remove_from_cart` | Remove items |
-| `ht_get_store` | Your pickup store |
+| `ht_get_store` | Your pickup store, and the store search prices against |
+| `ht_set_store` | Choose the search store by ZIP, name or location id (or clear it) |
 | `ht_list_timeslots` | Open pickup windows and fees for the cart |
 | `ht_start_checkout` | **Confirmation-gated.** Reserve a window and create the checkout, returning totals and the place-order link |
 | `ht_get_checkout` | The current checkout draft |
@@ -100,7 +110,8 @@ mean faking those signals, so the final click stays with you. See [docs/HT-API.m
 |---|---|---|
 | `HARRISTEETER_WS_PORT` | `37149` | fetchproxy concentrator port, shared by the whole fleet. Change only if you know why. |
 | `KROGER_API_CLIENT_ID` / `KROGER_API_CLIENT_SECRET` | unset | Optional Kroger developer app: search and prices without the browser |
-| `HARRISTEETER_LOCATION_ID` | your browser's store | 8-digit store id for bridge-free search |
+| `HARRISTEETER_LOCATION_ID` | unset | 8-digit store id for bridge-free search (below a saved `ht_set_store` choice) |
+| `HARRISTEETER_STATE_DIR` | `~/.harristeeter-mcp` | Where the saved and remembered store are kept |
 | `HARRISTEETER_DEBUG` | unset | `1` for verbose bridge logging to stderr |
 | `MCP_USER_TZ` | `America/New_York` | IANA zone sent with pickup-time requests |
 | `MCP_CONFIRM_MODE` | `ask-user` | `ask-user` (the model must get your OK in chat before using a token), `auto`, or `refuse` |

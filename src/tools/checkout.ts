@@ -35,24 +35,6 @@ function contactEmail(profile: Rec | undefined): string | undefined {
 
 export function registerCheckoutTools(server: McpServer, client: HtClient): void {
   server.registerTool(
-    'ht_get_store',
-    {
-      description: 'Show the Harris Teeter store this account shops at (pickup store, location id) — the store every search, price and pickup time is for.',
-      annotations: toolAnnotations({ title: 'Get my store', openWorld: true }),
-      inputSchema: z.object({}),
-      _meta: foodMeta('lookup', { aliases: ['my harris teeter', 'pickup store'] }),
-    },
-    async () => {
-      const prefs = await client.preferences();
-      return minifiedResult({
-        pickupStore: prefs.pickup ?? null,
-        activeModality: prefs.activeModality ?? null,
-        note: 'Change the store with the store picker at the top of harristeeter.com in the signed-in tab.',
-      });
-    },
-  );
-
-  server.registerTool(
     'ht_list_timeslots',
     {
       description:

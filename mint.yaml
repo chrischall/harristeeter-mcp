@@ -37,14 +37,20 @@ env:
     required: false
     help: >-
       Optional 8-digit store id for bridge-free search (find one with
-      ht_find_stores). Default: the store chosen in the signed-in browser.
+      ht_find_stores). A store saved with ht_set_store takes precedence.
+  - name: HARRISTEETER_STATE_DIR
+    required: false
+    help: >-
+      Where the saved and remembered store live (default ~/.harristeeter-mcp).
 state:
   dataDir: true
   reason: >-
     The fetchproxy identity lives at $HOME/.fetchproxy/identity/harristeeter-mcp.json
     and the pair code derives from it. Without a persistent $HOME every cold
     start mints a fresh identity and re-prompts pairing in the browser; the
-    API refuses bridge without it.
+    API refuses bridge without it. $HOME/.harristeeter-mcp/store.json keeps
+    the store chosen with ht_set_store and the browser's last-seen store;
+    without it bridge-free search forgets the store on every cold start.
 egress:
   allow:
     # The only host this process dials itself: Kroger's official API, used for
