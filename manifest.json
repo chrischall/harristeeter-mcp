@@ -168,7 +168,7 @@
     },
     {
       "name": "ht_rx_session",
-      "description": "Check the pharmacy session (separate sign-in with a one-time code)"
+      "description": "Check the pharmacy session (separate sign-in, one hour, not extendable)"
     },
     {
       "name": "ht_rx_list_prescriptions",

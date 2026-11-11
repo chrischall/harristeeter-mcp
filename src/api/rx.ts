@@ -1,8 +1,9 @@
 // Pharmacy (/rx/api, /rx-security). A separate, step-up session: opening
-// harristeeter.com/rx asks the user to sign in again with a one-time code, and
-// the resulting pharmacy session lasts about an hour (activeSecondsLeft). Every
-// call checks it first so an expired session reads as "re-verify", not as an
-// opaque error.
+// harristeeter.com/rx asks the user to sign in again (one-time code on an
+// unknown browser). It lasts one hour from sign-in — neither use nor the
+// extend call moves it (measured; docs/HT-API.md) — and at expiry a pharmacy
+// tab signs the whole site out. Every call checks it first so an expired
+// session reads as "sign in again", not as an opaque error.
 
 import { McpToolError } from '@chrischall/mcp-utils';
 import type { HtClient } from '../client.js';
@@ -12,7 +13,7 @@ type Rec = Record<string, unknown>;
 export class RxSessionError extends McpToolError {
   constructor(detail: string) {
     super(`The Harris Teeter pharmacy session is not active (${detail}).`, {
-      hint: 'Open https://www.harristeeter.com/rx/dashboard in the bridge browser and sign in again (it asks for a one-time code). The pharmacy session lasts about an hour.',
+      hint: 'Open https://www.harristeeter.com/rx/dashboard in the bridge browser and sign in again (a one-time code only on a browser it does not know yet). Pharmacy access lasts one hour from sign-in and cannot be extended; when it ends, a pharmacy tab signs the whole site out, so grocery tools may need a fresh sign-in too.',
       kind: 'session_expired',
       status: 401,
     });

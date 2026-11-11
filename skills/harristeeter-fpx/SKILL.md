@@ -48,7 +48,7 @@ scripts/ht rx                     # prescriptions — needs the pharmacy sign-in
 ```
 
 **Pharmacy** commands need a separate sign-in: open https://www.harristeeter.com/rx/dashboard,
-sign in again with the one-time code, and the pharmacy session lasts about an hour. Keep a
+sign in again (a one-time code only on a browser it doesn't know yet); pharmacy access lasts one hour from sign-in and can't be extended, and if a pharmacy tab is open when it ends the whole site signs out. Keep a
 regular harristeeter.com tab open too — the bridge can't send POSTs from a pharmacy page.
 
 Rules:

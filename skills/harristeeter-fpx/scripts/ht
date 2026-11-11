@@ -63,10 +63,10 @@ fresh_hdr() {
   cat "$f"
 }
 
-# Pharmacy commands need the step-up pharmacy session (about an hour).
+# Pharmacy commands need the step-up pharmacy session (one hour from sign-in; not extendable).
 rx_check() {
   site GET /rx-security/session "" | jq -e '.active == true and .sessionStatus == "AUTHORIZED"' >/dev/null \
-    || die "pharmacy session not active — sign in at https://www.harristeeter.com/rx/dashboard (one-time code); it lasts about an hour"
+    || die "pharmacy session not active — sign in at https://www.harristeeter.com/rx/dashboard (one-time code on a new browser); it lasts one hour from sign-in"
 }
 
 # Store context. x-laf-object = JSON of preferences.lafObject; cached 10 min.
