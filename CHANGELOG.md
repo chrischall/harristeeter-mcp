@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/chrischall/harristeeter-mcp/compare/v0.2.0...v0.3.0) (2026-11-11)
+
+
+### Features
+
+* choose the search store — saved, per call, or remembered from the browser ([#10](https://github.com/chrischall/harristeeter-mcp/issues/10)) ([bab51bf](https://github.com/chrischall/harristeeter-mcp/commit/bab51bfffc3fa62e1de7ccca508afe5b3b0622b7))
+
+
+### Bug Fixes
+
+* keep ht_get_store's 0.2.0 fields and failure behaviour ([#13](https://github.com/chrischall/harristeeter-mcp/issues/13)) ([d943a14](https://github.com/chrischall/harristeeter-mcp/commit/d943a14c05b3ea5a907f441347305aab50c8a3a5))
+
 ## [0.2.0](https://github.com/chrischall/harristeeter-mcp/compare/v0.1.0...v0.2.0) (2026-11-11)
 
 
