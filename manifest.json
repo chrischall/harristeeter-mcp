@@ -176,6 +176,14 @@
       "description": "Request a prescription refill, paid at the pharmacy (confirmation-gated)"
     },
     {
+      "name": "ht_add_to_shopping_list",
+      "description": "Add items to a shopping list by UPC"
+    },
+    {
+      "name": "ht_remove_from_shopping_list",
+      "description": "Remove items from a shopping list"
+    },
+    {
       "name": "ht_healthcheck",
       "description": "Check the fetchproxy browser-bridge connection"
     }

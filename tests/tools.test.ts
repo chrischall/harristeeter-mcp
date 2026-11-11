@@ -117,6 +117,8 @@ const EXPECTED_INTENTS: Record<string, string> = {
   ht_create_shopping_list: 'change',
   ht_rename_shopping_list: 'change',
   ht_delete_shopping_list: 'change',
+  ht_add_to_shopping_list: 'change',
+  ht_remove_from_shopping_list: 'change',
   ht_oa_list_departments: 'lookup',
   ht_oa_list_menu: 'lookup',
   ht_oa_get_item: 'lookup',
@@ -129,7 +131,7 @@ const EXPECTED_INTENTS: Record<string, string> = {
 // Tools that reach another person or cannot be undone from this tool set.
 const DESTRUCTIVE = new Set(['ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
 const GATED = new Set(['ht_start_checkout', 'ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
-const WRITES = new Set(['ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout', 'ht_clip_coupon', 'ht_unclip_coupon', 'ht_create_shopping_list', 'ht_rename_shopping_list', 'ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
+const WRITES = new Set(['ht_add_to_shopping_list', 'ht_remove_from_shopping_list', 'ht_add_to_cart', 'ht_update_cart_item', 'ht_remove_from_cart', 'ht_start_checkout', 'ht_clip_coupon', 'ht_unclip_coupon', 'ht_create_shopping_list', 'ht_rename_shopping_list', 'ht_delete_shopping_list', 'ht_oa_place_order', 'ht_rx_request_refill']);
 
 describe('served tool list', () => {
   it('every tool is hinted, annotated and in manifest.json', async () => {

@@ -3,12 +3,28 @@ import { z } from 'zod';
 import { toolAnnotations, minifiedResult, McpToolError, confirmWrite, confirmTokenParam, CONFIRM_FLOW_SENTENCE } from '@chrischall/mcp-utils';
 import type { ServerContext } from '@modelcontextprotocol/server';
 import type { HtClient } from '../client.js';
-import { listLists, getList, createList, deleteList, updateList } from '../api/lists.js';
+import { listLists, getList, createList, deleteList, updateList, setListItems } from '../api/lists.js';
+import { toGtin13 } from '../client.js';
+import { compactProduct } from '../project.js';
 import { viewArg, viewResponse } from '../view.js';
 import { foodMeta } from './hints.js';
 
 type Rec = Record<string, unknown>;
 const ListId = z.string().regex(/^[0-9a-fA-F-]{8,64}$/).describe('listId from ht_list_shopping_lists.');
+
+const Upc = z.string().regex(/^\d{1,14}$/).describe('UPC from ht_search_products.');
+
+/** Re-read and report any requested line that did not land. */
+async function applyListChanges(client: HtClient, listId: string, changes: { upc: string; quantity: number; name?: string }[]) {
+  await setListItems(client, listId, changes);
+  const after = await getList(client, listId);
+  const lines = Array.isArray(after?.lineItems) ? (after!.lineItems as Rec[]) : [];
+  const missed = changes.filter((c) => (Number(lines.find((l) => l.upc === c.upc)?.quantity ?? 0)) !== c.quantity);
+  return minifiedResult({
+    ...compactList(after ?? { listId }),
+    ...(missed.length ? { warning: `Harris Teeter did not apply ${missed.length} change(s): ${missed.map((m) => m.upc).join(', ')}.` } : {}),
+  });
+}
 
 function compactList(l: Rec) {
   return {
@@ -102,5 +118,46 @@ export function registerListTools(server: McpServer, client: HtClient): void {
       const still = (await listLists(client)).some((x) => x.listId === listId);
       return minifiedResult({ deleted: !still, listId, name: l.name });
     },
+  );
+
+  server.registerTool(
+    'ht_add_to_shopping_list',
+    {
+      description: 'Add items to a Harris Teeter shopping list by UPC (adds to any quantity already there). Undo with ht_remove_from_shopping_list.',
+      annotations: toolAnnotations({ title: 'Add to shopping list', readOnly: false, destructive: false, openWorld: true }),
+      inputSchema: z.object({
+        listId: ListId,
+        items: z.array(z.object({ upc: Upc, quantity: z.number().int().min(1).max(99).default(1) })).min(1).max(50),
+      }),
+      _meta: foodMeta('change', { aliases: ['add to list', 'add to grocery list'] }),
+    },
+    async ({ listId, items }) => {
+      const current = await getList(client, listId);
+      if (!current) throw new McpToolError(`Shopping list ${listId} not found.`);
+      const have = new Map((Array.isArray(current.lineItems) ? (current.lineItems as Rec[]) : []).map((l) => [String(l.upc), Number(l.quantity ?? 0)]));
+      const upcs = items.map((i) => toGtin13(i.upc));
+      const names = new Map(
+        (await client.getProducts(upcs.filter((u) => !have.has(u)))).map((p) => [String((p.item as Rec | undefined)?.upc ?? ''), compactProduct(p)?.description]),
+      );
+      const merged = new Map<string, { upc: string; quantity: number; name?: string }>();
+      items.forEach((i, n) => {
+        const upc = upcs[n]!;
+        const prev = merged.get(upc)?.quantity ?? have.get(upc) ?? 0;
+        const name = names.get(upc);
+        merged.set(upc, { upc, quantity: prev + (i.quantity ?? 1), ...(name ? { name } : {}) });
+      });
+      return applyListChanges(client, listId, [...merged.values()]);
+    },
+  );
+
+  server.registerTool(
+    'ht_remove_from_shopping_list',
+    {
+      description: 'Remove items from a Harris Teeter shopping list by UPC. Re-add with ht_add_to_shopping_list.',
+      annotations: toolAnnotations({ title: 'Remove from shopping list', readOnly: false, destructive: false, idempotent: true, openWorld: true }),
+      inputSchema: z.object({ listId: ListId, upcs: z.array(Upc).min(1).max(50) }),
+      _meta: foodMeta('change'),
+    },
+    async ({ listId, upcs }) => applyListChanges(client, listId, upcs.map((u) => ({ upc: toGtin13(u), quantity: 0 }))),
   );
 }

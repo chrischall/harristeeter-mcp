@@ -1,8 +1,9 @@
 // Shopping lists (atlas shopping-list service).
 // Reads verified live. Writes follow the site's list-details bundle:
 // POST create, PUT /{listId} {name, versionKey, lineItems} (quantity 0 removes),
-// DELETE /{listId}. The line-item shape is pinned by the live test in
-// docs/HT-API.md — see LIST_ITEM_SHAPE_VERIFIED.
+// DELETE /{listId}. Line items (verified live 2026-11-11 on a real list):
+// {id, name, upc, type:"UPC", channel:"WEB", checked, quantity, categoryId, comments}.
+// A free-text {description, quantity} item is accepted and silently dropped.
 
 import { McpToolError } from '@chrischall/mcp-utils';
 import type { HtClient } from '../client.js';
@@ -38,11 +39,32 @@ export async function deleteList(client: HtClient, listId: string): Promise<void
 }
 
 export interface ListItemChange {
-  /** Free-text item, as the list page's "Add Items" box takes. */
-  description: string;
-  upc?: string;
-  /** 0 removes. */
+  /** 13-digit UPC (from search). */
+  upc: string;
+  /** Absolute quantity; 0 removes the line. */
   quantity: number;
+  /** Display name for a NEW line (existing lines keep theirs). */
+  name?: string;
+}
+
+/**
+ * Read-modify-write: send every current line, with the changes applied
+ * (quantity 0 removes). Verified live that a lone quantity-0 line removes only
+ * itself, and that the full list plus a new line adds it; sending the whole
+ * list is safe whichever way the service treats omitted lines.
+ */
+export async function setListItems(client: HtClient, listId: string, changes: ListItemChange[]): Promise<Rec | undefined> {
+  const current = await getList(client, listId);
+  if (!current) throw new McpToolError(`Shopping list ${listId} not found.`);
+  const lines = Array.isArray(current.lineItems) ? (current.lineItems as Rec[]).map((l) => ({ ...l })) : [];
+  for (const c of changes) {
+    const at = lines.findIndex((l) => l.upc === c.upc);
+    if (at >= 0) lines[at] = { ...lines[at], quantity: c.quantity };
+    else if (c.quantity > 0) {
+      lines.push({ name: c.name ?? c.upc, upc: c.upc, type: 'UPC', channel: 'WEB', checked: false, quantity: c.quantity, comments: '' });
+    } else throw new McpToolError(`UPC ${c.upc} is not on this list, so there is nothing to remove.`);
+  }
+  return updateList(client, listId, { items: lines });
 }
 
 /** PUT the list with changed lines. The list's current versionKey is read first. */

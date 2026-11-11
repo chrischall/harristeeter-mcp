@@ -114,7 +114,7 @@ Status: **live** = exercised through the built server against a real account;
 | Recipe detail | `GET /atlas/v1/recipe/recipes/{id}?projections=recipes.full&filter.division=<3 digits>` | `400 MISSING_DIVISION` without the division | live |
 | Shopping lists | `GET /atlas/v1/shopping-list/v1/shopping-lists[/{listId}?projections=shoppingLists.full]` | `data.shoppingLists` | live |
 | List create / delete | `POST …/shopping-lists {name}`, `DELETE …/{listId}` | from the list-details bundle | code |
-| List items | `PUT …/{listId} {name, versionKey, lineItems}` | a guessed `{description, quantity}` item is accepted and silently dropped; the real item shape is the GET record of an existing item (pending a list that has one) | **not built** |
+| List items | `PUT …/{listId} {name, versionKey, lineItems}` with lines `{id?, name, upc, type:"UPC", channel:"WEB", checked, quantity, comments}` | a free-text `{description, quantity}` line is accepted and silently dropped. Verified: full list + a new line adds it; a lone `quantity:0` line removes only itself. The tools always send the whole list. | live |
 
 ## Order Ahead (`/fresh/api`)
 

@@ -281,3 +281,43 @@ describe('prescription refill', () => {
     expect(calls.some((c) => c.path === '/rx/api/orders-stage')).toBe(false);
   });
 });
+
+describe('shopping-list items', () => {
+  const LIST = {
+    listId: 'aaaaaaaa-1111',
+    name: 'Weekly',
+    versionKey: 'v1',
+    lineItems: [{ id: 'l1', name: 'Bananas', upc: '0000000000011', type: 'UPC', channel: 'WEB', checked: false, quantity: 1, categoryId: '73', comments: '' }],
+  };
+  function listSite() {
+    return makeClient(withPrefs((init) => (init.method === 'GET' ? { data: { shoppingLists: LIST } } : { data: { shoppingLists: { listId: LIST.listId } } })));
+  }
+
+  it('sends every current line untouched plus the new line in the verified shape', async () => {
+    const { setListItems } = await import('../src/api/lists.js');
+    const { client, calls } = listSite();
+    await setListItems(client, LIST.listId, [{ upc: '0000000000022', quantity: 2, name: 'Milk' }]);
+    expect(JSON.parse(calls.find((c) => c.method === 'PUT')!.body!)).toEqual({
+      name: 'Weekly',
+      versionKey: 'v1',
+      lineItems: [
+        LIST.lineItems[0],
+        { name: 'Milk', upc: '0000000000022', type: 'UPC', channel: 'WEB', checked: false, quantity: 2, comments: '' },
+      ],
+    });
+  });
+
+  it('removes by setting quantity 0 on the existing line (keeping its id)', async () => {
+    const { setListItems } = await import('../src/api/lists.js');
+    const { client, calls } = listSite();
+    await setListItems(client, LIST.listId, [{ upc: '0000000000011', quantity: 0 }]);
+    expect(JSON.parse(calls.find((c) => c.method === 'PUT')!.body!).lineItems).toEqual([{ ...LIST.lineItems[0], quantity: 0 }]);
+  });
+
+  it('refuses to remove something that is not on the list, without writing', async () => {
+    const { setListItems } = await import('../src/api/lists.js');
+    const { client, calls } = listSite();
+    expect((await failure(setListItems(client, LIST.listId, [{ upc: '0000000000099', quantity: 0 }]))).message).toMatch(/not on this list/);
+    expect(calls.some((c) => c.method === 'PUT')).toBe(false);
+  });
+});

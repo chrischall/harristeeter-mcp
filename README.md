@@ -54,7 +54,8 @@ call even though the call succeeds. Don't approve those; that's the other browse
 | `ht_get_weekly_ad` | This week's ad, by department or text |
 | `ht_get_fuel_points` | Fuel points balance and expiry |
 | `ht_search_recipes` / `ht_get_recipe` | Recipes, with store products matched to ingredients |
-| `ht_list_shopping_lists` / `ht_get_shopping_list` / `ht_create_shopping_list` / `ht_rename_shopping_list` / `ht_delete_shopping_list` | Shopping lists (delete is confirmation-gated). Adding items isn't built yet. |
+| `ht_list_shopping_lists` / `ht_get_shopping_list` / `ht_create_shopping_list` / `ht_rename_shopping_list` / `ht_delete_shopping_list` | Shopping lists (delete is confirmation-gated) |
+| `ht_add_to_shopping_list` / `ht_remove_from_shopping_list` | Add or remove list items by UPC |
 | `ht_oa_list_departments` / `ht_oa_list_menu` / `ht_oa_get_item` / `ht_oa_list_pickup_times` | Order Ahead menus and pickup times |
 | `ht_oa_place_order` | **Confirmation-gated.** Place an Order Ahead order, paid at pickup. Not yet verified against a live order. |
 | `ht_rx_session` / `ht_rx_list_prescriptions` | Pharmacy: session status, prescriptions, refills remaining, due dates |
