@@ -11,6 +11,9 @@ import { foodMeta } from './hints.js';
 
 const Upc = z.string().regex(/^\d{1,14}$/, 'digits only').describe('Product UPC as returned by ht_search_products (13 digits, leading zeros kept).');
 
+/** Said in every API-path result, not only in the description: the two sources price produce differently. */
+export const API_PRICE_NOTE = 'Prices from api.kroger.com: produce is priced per pound (the website prices it per item).';
+
 /** The store the API path prices against: HARRISTEETER_LOCATION_ID, else the bridge's pickup store. */
 async function apiLocation(client: HtClient): Promise<string> {
   const configured = configuredLocationId();
@@ -43,9 +46,9 @@ export function registerProductTools(server: McpServer, client: HtClient, kroger
         // Bridge-free: Kroger's official API (no browser needed).
         const r = await kroger.searchProducts(query, { locationId: await apiLocation(client), limit: limit ?? 10, offset: offset ?? 0, pickupOnly: pickupOnly !== false });
         const products = r.products;
-        return viewResponse(view, { total: r.total, offset: offset ?? 0, source: 'api.kroger.com', products }, (d) => {
-          const x = d as { total?: number; offset: number; source: string; products: Record<string, unknown>[] };
-          return { total: x.total, offset: x.offset, source: x.source, products: x.products.map(compactApiProduct) };
+        return viewResponse(view, { total: r.total, offset: offset ?? 0, source: 'api.kroger.com', note: API_PRICE_NOTE, products }, (d) => {
+          const x = d as { total?: number; offset: number; source: string; note: string; products: Record<string, unknown>[] };
+          return { total: x.total, offset: x.offset, source: x.source, note: x.note, products: x.products.map(compactApiProduct) };
         });
       }
       const { total, hits } = await client.searchProducts(query, { limit, offset, pickupOnly: pickupOnly !== false });
@@ -53,11 +56,12 @@ export function registerProductTools(server: McpServer, client: HtClient, kroger
       const products = await client.getProducts(upcs);
       const byUpc = new Map(products.map((p) => [String((p.item as Record<string, unknown>)?.upc ?? p.upc ?? ''), p]));
       const merged = hits.map((h) => byUpc.get(String(h.upc)) ?? h);
-      return viewResponse(view, { total, offset, products: merged }, (d) => {
-        const data = d as { total?: number; offset: number; products: Record<string, unknown>[] };
+      return viewResponse(view, { total, offset, source: 'harristeeter.com', products: merged }, (d) => {
+        const data = d as { total?: number; offset: number; source: string; products: Record<string, unknown>[] };
         return {
           total: data.total,
           offset: data.offset,
+          source: data.source,
           products: data.products.map((p) => compactProduct(p) ?? { upc: p.upc, description: p.description }),
         };
       });

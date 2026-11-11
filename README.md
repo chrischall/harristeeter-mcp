@@ -28,7 +28,9 @@ Product search, prices and store lookup can run without the bridge through Kroge
 API. Register an app at [developer.kroger.com](https://developer.kroger.com) and set
 `KROGER_API_CLIENT_ID` and `KROGER_API_CLIENT_SECRET`. `ht_search_products`, `ht_get_products` and
 `ht_find_stores` then call `api.kroger.com` directly, pricing against `HARRISTEETER_LOCATION_ID`
-(use `ht_find_stores` to look it up) or the store chosen in your browser. Everything else (cart,
+(use `ht_find_stores` to look it up) or the store chosen in your browser. Results have the same
+fields either way and say which `source` served them; the API prices produce per pound, and each
+API result says so. Everything else (cart,
 checkout, coupons, lists, Order Ahead, pharmacy) still needs the bridge: Kroger's API sign-in
 doesn't accept Harris Teeter accounts, so it can't act on your account.
 
@@ -48,6 +50,7 @@ doesn't accept Harris Teeter accounts, so it can't act on your account.
 |---|---|
 | `ht_search_products` | Search at your pickup store: UPC, name, brand, size, price, sale price, unit price, stock |
 | `ht_get_products` | Look up UPCs |
+| `ht_find_stores` | Harris Teeter stores near a ZIP, with the 8-digit location id (needs Kroger API credentials) |
 | `ht_get_cart` | Cart with names, prices, estimated subtotal |
 | `ht_add_to_cart` | Add items by UPC (adds to existing quantity) |
 | `ht_update_cart_item` | Set quantity / substitution preference (0 removes) |

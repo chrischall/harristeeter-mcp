@@ -143,7 +143,8 @@ export function compactApiProduct(p: Rec) {
     size: item.size,
     price: price.regular,
     salePrice: typeof price.promo === 'number' && price.promo > 0 ? price.promo : undefined,
-    stock: (item.inventory as Rec | undefined)?.stockLevel,
+    // Same name as the bridge path's field, so a caller's result does not change shape with the env.
+    pickupStock: (item.inventory as Rec | undefined)?.stockLevel,
     pickup: fulfillment.curbside,
     aisle: ((p.aisleLocations as Rec[] | undefined) ?? [])[0]?.description,
   };

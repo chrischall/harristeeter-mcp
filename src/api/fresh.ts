@@ -16,17 +16,29 @@ interface FreshStore {
 
 const storeCache = new WeakMap<HtClient, Promise<FreshStore>>();
 
-function unwrap(path: string, r: { status: number; json: unknown; text: string }): unknown {
-  const j = r.json as { Status?: string; Data?: unknown; Error?: { Message?: string } } | undefined;
-  if (!j) {
-    throw new McpToolError(`Order Ahead returned ${r.status} with no data for ${path.split('?')[0]}.`, {
-      hint: 'Open https://www.harristeeter.com/order-ahead in the signed-in tab once, then retry.',
-      status: r.status,
-      kind: 'http',
-    });
+/** An Order Ahead reply that is not a success; carries the HTTP status. */
+export class FreshApiError extends McpToolError {
+  constructor(message: string, status: number) {
+    super(message, { status, kind: 'http' });
+    this.name = 'FreshApiError';
   }
-  if (j.Status && j.Status !== 'success') {
-    throw new McpToolError(`Order Ahead: ${j.Error?.Message ?? j.Status}`, { status: r.status, kind: 'http' });
+}
+
+function unwrap(path: string, r: { status: number; json: unknown; text: string }): unknown {
+  const p = path.split('?')[0];
+  const j = r.json as { Status?: string; Data?: unknown; Error?: { Message?: string }; Message?: string } | undefined;
+  // The HTTP status decides first: a 4xx/5xx is a failure whatever the body says.
+  if (r.status >= 400) {
+    throw new FreshApiError(`Order Ahead returned HTTP ${r.status} for ${p}${j?.Error?.Message ?? j?.Message ? `: ${j?.Error?.Message ?? j?.Message}` : ''}.`, r.status);
+  }
+  if (!j) {
+    throw new FreshApiError(`Order Ahead returned ${r.status} with no data for ${p}.`, r.status);
+  }
+  if (j.Status !== 'success') {
+    throw new FreshApiError(
+      j.Status ? `Order Ahead: ${j.Error?.Message ?? j.Status}` : `Order Ahead returned an unexpected reply (no Status) for ${p}.`,
+      r.status,
+    );
   }
   return j.Data;
 }
