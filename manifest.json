@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "harristeeter-mcp",
   "display_name": "Harris Teeter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Harris Teeter for Claude — groceries, cart, pickup, coupons, weekly ad, recipes, lists, Order Ahead and pharmacy",
   "author": {
     "name": "Chris Chall",

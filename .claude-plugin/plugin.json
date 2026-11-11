@@ -1,7 +1,7 @@
 {
   "name": "harristeeter-mcp",
   "displayName": "Harris Teeter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Harris Teeter grocery pickup for Claude — search, cart, pickup times and checkout",
   "author": {
     "name": "Chris Hall",
