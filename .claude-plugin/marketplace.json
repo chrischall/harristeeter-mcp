@@ -7,7 +7,7 @@
   },
   "metadata": {
     "description": "Harris Teeter grocery pickup for Claude — search products with prices, build the cart, list pickup times and start checkout. harristeeter.com serves its API only to a real browser, so every request routes through the user's own signed-in harristeeter.com tab via the ContextMint Bridge browser extension, reusing their session. Placing the order stays a click in the browser.",
-    "version": "0.2.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
@@ -15,7 +15,7 @@
       "displayName": "Harris Teeter",
       "source": "./",
       "description": "MCP server for Harris Teeter — groceries, cart, pickup times and checkout",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": {
         "name": "Chris Hall"
       },
