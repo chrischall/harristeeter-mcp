@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/chrischall/harristeeter-mcp/compare/v0.3.0...v0.3.1) (2026-11-18)
+
+
+### Bug Fixes
+
+* **deps:** Bump @chrischall/mcp-utils from 3.8.0 to 3.9.0 in the production-dependencies group ([#14](https://github.com/chrischall/harristeeter-mcp/issues/14)) ([794864c](https://github.com/chrischall/harristeeter-mcp/commit/794864c93a8a23375d7b9c694820130a33ebd941))
+
 ## [0.3.0](https://github.com/chrischall/harristeeter-mcp/compare/v0.2.0...v0.3.0) (2026-11-11)
 
 
